@@ -98,8 +98,12 @@ class ApiClient {
     if (isClient) {
       if (token) {
         localStorage.setItem("admin_access_token", token);
+        // Also save to cookie so Next.js middleware can read it for route guarding
+        document.cookie = `admin_access_token=${token}; path=/; max-age=${60 * 60 * 24 * 10}; SameSite=Lax`;
       } else {
         localStorage.removeItem("admin_access_token");
+        // Clear cookie
+        document.cookie = "admin_access_token=; path=/; max-age=0";
       }
     }
   }
@@ -110,14 +114,16 @@ class ApiClient {
       // Try admin login first
       const res = await fetch(`${BASE_URL}/auth/admin-login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!res.ok) {
-        // Try user login as fallback
+        // Try regular login as fallback
         const resUser = await fetch(`${BASE_URL}/auth/login`, {
           method: "POST",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
@@ -129,16 +135,22 @@ class ApiClient {
           } catch { /* ignore */ }
           throw new Error(msg);
         }
-        const data = await resUser.json();
-        const token = data?.data?.accessToken ?? data?.accessToken;
-        if (!token) throw new Error("No access token returned");
-        this.setToken(token);
+        const userData = await resUser.json();
+        const userToken =
+          userData?.data?.accessToken ??
+          userData?.accessToken ??
+          null;
+        if (!userToken) throw new Error("No access token returned");
+        this.setToken(userToken);
         this.setLive(true);
-        return { success: true, token };
+        return { success: true, token: userToken };
       }
 
       const data = await res.json();
-      const token = data?.data?.accessToken ?? data?.accessToken;
+      const token =
+        data?.data?.accessToken ??
+        data?.accessToken ??
+        null;
       if (!token) throw new Error("No access token returned");
       this.setToken(token);
       this.setLive(true);
@@ -150,6 +162,7 @@ class ApiClient {
         try {
           await fetch(`${BASE_URL}/auth/logout`, {
             method: "POST",
+            credentials: "include",
             headers: this.getHeaders(),
           });
         } catch { /* ignore logout errors */ }

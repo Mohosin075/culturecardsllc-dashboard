@@ -21,7 +21,8 @@ export default function LoginPage() {
     try {
       const res = await api.auth.login(email, password);
       if (res.success) {
-        router.push("/overview");
+        // Use replace so the login page is removed from browser history
+        router.replace("/overview");
       } else {
         setError("Invalid credentials. Please verify your email and password.");
       }
