@@ -7,6 +7,7 @@ import { fetchListings, deleteListing, toggleBoostListing, Listing } from "@/app
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
 import Pagination from "@/app/components/Pagination";
+import ListingDetailsModal from "@/app/components/ListingDetailsModal";
 
 export default function ListingsPage() {
   const dispatch = useAppDispatch();
@@ -44,18 +45,28 @@ export default function ListingsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [boostFilter, setBoostFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const filteredListings = listings.filter(
-    (item: Listing) =>
+  const filteredListings = listings.filter((item: Listing) => {
+    const matchesSearch =
       item.item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.seller?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      item.category?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesCategory = categoryFilter === "All" || item.category?.toLowerCase() === categoryFilter.toLowerCase();
+    const matchesStatus = statusFilter === "All" || item.status?.toLowerCase() === statusFilter.toLowerCase();
+    const matchesBoost = boostFilter === "All" || (boostFilter === "Boosted" ? item.boosted : !item.boosted);
 
-  // Reset to page 1 when search query changes
+    return matchesSearch && matchesCategory && matchesStatus && matchesBoost;
+  });
+
+  // Reset to page 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, categoryFilter, statusFilter, boostFilter]);
 
   const totalPages = Math.ceil(filteredListings.length / rowsPerPage);
   const paginatedListings = filteredListings.slice(
@@ -83,8 +94,7 @@ export default function ListingsPage() {
         <h1 className="text-3xl font-semibold">Listings Management</h1>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-center">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
           <input
@@ -95,10 +105,107 @@ export default function ListingsPage() {
             className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-zinc-300 focus:outline-none focus:border-[#155DFC] transition-colors"
           />
         </div>
-        <button className="flex items-center gap-2 bg-[#111111] border border-white/5 px-4 py-2 rounded-xl text-zinc-300 hover:bg-white/5 transition-colors">
-          <Filter size={18} />
-          <span className="font-medium">More Filters</span>
-        </button>
+
+        {/* Interactive Filter Dropdown Popover */}
+        <div className="relative">
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-2 bg-[#111111] border px-4 py-3 rounded-xl text-zinc-300 hover:bg-white/5 transition-colors cursor-pointer ${
+              isFilterOpen || categoryFilter !== "All" || statusFilter !== "All" || boostFilter !== "All"
+                ? "border-[#155DFC] text-white"
+                : "border-white/5"
+            }`}
+          >
+            <Filter size={18} />
+            <span className="font-medium">Filter</span>
+            {(categoryFilter !== "All" || statusFilter !== "All" || boostFilter !== "All") && (
+              <span className="w-2 h-2 rounded-full bg-[#155DFC]" />
+            )}
+          </button>
+
+          {isFilterOpen && (
+            <>
+              {/* Overlay to close popover */}
+              <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+              
+              <div className="absolute right-0 mt-2 w-64 bg-[#111111]/95 border border-white/10 rounded-2xl p-5 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-md">
+                <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Filters</span>
+                  <button
+                    onClick={() => {
+                      setCategoryFilter("All");
+                      setStatusFilter("All");
+                      setBoostFilter("All");
+                    }}
+                    className="text-[10px] text-[#155DFC] hover:underline font-bold"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Category</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Sneakers", "Cards", "Watches", "Fine Art", "TCG"].map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setCategoryFilter(cat)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          categoryFilter === cat
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Status</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Live", "Sold", "Removed"].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          statusFilter === status
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Boost Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Featured Boost</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Boosted", "Standard"].map((boost) => (
+                      <button
+                        key={boost}
+                        onClick={() => setBoostFilter(boost)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          boostFilter === boost
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {boost === "All" ? "All" : boost === "Boosted" ? "Boosted" : "Standard"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Table Container */}
@@ -160,27 +267,31 @@ export default function ListingsPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3 text-zinc-500">
+                    <div className="flex items-center gap-2 text-zinc-500">
                       <button
                         onClick={() => setSelectedListing(item)}
-                        className="hover:text-white transition-colors"
+                        className="p-2 bg-black/40 hover:bg-[#155DFC]/20 border border-white/5 hover:border-[#155DFC]/30 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
                         title="View Listing Details"
                       >
-                        <Eye size={18} />
+                        <Eye size={16} />
                       </button>
                       <button
                         onClick={() => handleDeleteListing(item.id)}
-                        className="hover:text-red-500 transition-colors"
+                        className="p-2 bg-black/40 hover:bg-red-500/20 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer"
                         title="Delete Listing"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                       <button
                         onClick={() => handleToggleBoost(item.id, item.boosted)}
-                        className={`${item.boosted ? 'text-yellow-500' : 'hover:text-white'} transition-colors`}
+                        className={`p-2 bg-black/40 border border-white/5 rounded-xl transition-all cursor-pointer ${
+                          item.boosted
+                            ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-500 hover:bg-yellow-500/20"
+                            : "hover:bg-yellow-500/20 hover:border-yellow-500/30 text-zinc-400 hover:text-yellow-500"
+                        }`}
                         title="Toggle Boost"
                       >
-                        <Star size={18} className={item.boosted ? "fill-yellow-500" : ""} />
+                        <Star size={16} className={item.boosted ? "fill-yellow-500" : ""} />
                       </button>
                     </div>
                   </td>
@@ -201,75 +312,10 @@ export default function ListingsPage() {
       </div>
 
       {/* Listing Details Modal */}
-      {selectedListing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setSelectedListing(null)}
-          />
-
-          <div className="relative w-full max-w-lg bg-[#111111] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-8 space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{selectedListing.item}</h2>
-                  <p className="text-zinc-500 text-sm mt-1">Listing details and metrics</p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                    selectedListing.status === "Live"
-                      ? "bg-green-500/10 text-green-500 border-green-500/20"
-                      : selectedListing.status === "Sold"
-                      ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                      : "bg-red-500/10 text-red-500 border-red-500/20"
-                  }`}
-                >
-                  {selectedListing.status}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 p-4 bg-black/40 border border-white/5 rounded-2xl">
-                <div>
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Listing ID</span>
-                  <span className="text-sm font-mono text-zinc-300 block mt-1">{selectedListing.id}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Category</span>
-                  <span className="text-sm font-medium text-blue-400 block mt-1">{selectedListing.category}</span>
-                </div>
-                <div className="col-span-2 border-t border-white/5 pt-3">
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Seller</span>
-                  <span className="text-sm text-zinc-300 block mt-1">{selectedListing.seller}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 bg-black/40 border border-white/5 rounded-2xl text-center">
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Price</span>
-                  <span className="text-lg font-bold text-green-500 block mt-1">{selectedListing.price}</span>
-                </div>
-                <div className="p-4 bg-black/40 border border-white/5 rounded-2xl text-center">
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Views</span>
-                  <span className="text-lg font-bold text-white block mt-1">{selectedListing.views}</span>
-                </div>
-                <div className="p-4 bg-black/40 border border-white/5 rounded-2xl text-center">
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">Boosted</span>
-                  <span className="text-lg font-bold text-yellow-500 block mt-1">{selectedListing.boosted ? "Yes" : "No"}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-white/5">
-                <button
-                  onClick={() => setSelectedListing(null)}
-                  className="px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-300 rounded-xl text-sm font-semibold transition-all active:scale-95"
-                >
-                  Close Details
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ListingDetailsModal
+        listing={selectedListing}
+        onClose={() => setSelectedListing(null)}
+      />
     </div>
   );
 }

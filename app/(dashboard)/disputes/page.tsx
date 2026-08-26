@@ -9,7 +9,9 @@ import {
   FileImage, 
   FileText,
   Clock,
-  Loader2
+  Loader2,
+  Search,
+  Filter
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchDisputes, resolveDispute, rejectDispute, DisputeItem } from "@/app/store/slices/disputesSlice";
@@ -23,11 +25,36 @@ export default function DisputesPage() {
   const [selectedDispute, setSelectedDispute] = useState<DisputeItem | null>(null);
   const { showAlert, showConfirm, showPrompt } = useAlert();
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const totalPages = Math.ceil(disputes.length / rowsPerPage);
-  const paginatedDisputes = disputes.slice(
+  const filteredDisputes = disputes.filter((dispute: DisputeItem) => {
+    const userNames = dispute.users?.map((u: any) => u.name).join(" ") || "";
+    const matchesSearch =
+      dispute.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      userNames.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dispute.targetId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dispute.issueType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dispute.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = statusFilter === "All" || dispute.status?.toLowerCase() === statusFilter.toLowerCase();
+    const matchesPriority = priorityFilter === "All" || dispute.priority?.toLowerCase() === priorityFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, priorityFilter]);
+
+  const totalPages = Math.ceil(filteredDisputes.length / rowsPerPage);
+  const paginatedDisputes = filteredDisputes.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
@@ -73,11 +100,105 @@ export default function DisputesPage() {
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       <h1 className="text-3xl font-semibold text-white">Dispute Management</h1>
 
+      {/* Search and Filter */}
+      <div className="flex gap-4 items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <input
+            type="text"
+            placeholder="Search disputes by ID, user, target, description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-zinc-300 focus:outline-none focus:border-[#155DFC] transition-colors"
+          />
+        </div>
+
+        {/* Interactive Filter Dropdown Popover */}
+        <div className="relative">
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-2 bg-[#111111] border px-4 py-3 rounded-xl text-zinc-300 hover:bg-white/5 transition-colors cursor-pointer ${
+              isFilterOpen || statusFilter !== "All" || priorityFilter !== "All"
+                ? "border-[#155DFC] text-white"
+                : "border-white/5"
+            }`}
+          >
+            <Filter size={18} />
+            <span className="font-medium">Filter</span>
+            {(statusFilter !== "All" || priorityFilter !== "All") && (
+              <span className="w-2 h-2 rounded-full bg-[#155DFC]" />
+            )}
+          </button>
+
+          {isFilterOpen && (
+            <>
+              {/* Overlay to close popover */}
+              <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+              
+              <div className="absolute right-0 mt-2 w-64 bg-[#111111]/95 border border-white/10 rounded-2xl p-5 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-md">
+                <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Filters</span>
+                  <button
+                    onClick={() => {
+                      setStatusFilter("All");
+                      setPriorityFilter("All");
+                    }}
+                    className="text-[10px] text-[#155DFC] hover:underline font-bold"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {/* Status Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Status</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Open", "Reviewing", "Resolved", "Rejected"].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          statusFilter.toLowerCase() === status.toLowerCase()
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Priority Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Priority</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "High", "Medium", "Low"].map((priority) => (
+                      <button
+                        key={priority}
+                        onClick={() => setPriorityFilter(priority)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          priorityFilter.toLowerCase() === priority.toLowerCase()
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {priority}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-6">
-        {disputes.length === 0 ? (
+        {filteredDisputes.length === 0 ? (
           <div className="bg-[#111111] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-500">
               <Clock size={32} />
@@ -85,7 +206,7 @@ export default function DisputesPage() {
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-zinc-200">No Disputes Found</h3>
               <p className="text-sm text-zinc-500 max-w-sm">
-                There are currently no active disputes or support tickets requiring attention.
+                There are currently no active disputes or support tickets matching your filters.
               </p>
             </div>
           </div>

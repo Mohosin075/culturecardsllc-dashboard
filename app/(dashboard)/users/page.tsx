@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Filter, Eye, UserMinus, ShieldCheck, Star, Loader2 } from "lucide-react";
+import { Search, Filter, Eye, UserMinus, Trash2, Star, Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchUsers, updateUserStatus, deleteUser, type User } from "@/app/store/slices/usersSlice";
 import { useAlert } from "@/app/context/AlertContext";
@@ -46,18 +46,27 @@ export default function UsersPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [roleFilter, setRoleFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const filteredUsers = users.filter(
-    (user) =>
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Check role safely (contains string)
+    const matchesRole = roleFilter === "All" || user.role?.toLowerCase().includes(roleFilter.toLowerCase());
+    const matchesStatus = statusFilter === "All" || user.status === statusFilter;
 
-  // Reset to page 1 when search query changes
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Reset to page 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, roleFilter, statusFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
   const paginatedUsers = filteredUsers.slice(
@@ -86,7 +95,7 @@ export default function UsersPage() {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-center">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
           <input
@@ -97,10 +106,86 @@ export default function UsersPage() {
             className="w-full bg-[#111111] border border-white/5 rounded-xl py-3 pl-12 pr-4 text-zinc-300 focus:outline-none focus:border-[#155DFC] transition-colors"
           />
         </div>
-        <button className="flex items-center gap-2 bg-[#111111] border border-white/5 px-4 py-2 rounded-xl text-zinc-300 hover:bg-white/5 transition-colors">
-          <Filter size={18} />
-          <span className="font-medium">Filter</span>
-        </button>
+        
+        {/* Interactive Filter Dropdown Popover */}
+        <div className="relative">
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`flex items-center gap-2 bg-[#111111] border px-4 py-3 rounded-xl text-zinc-300 hover:bg-white/5 transition-colors cursor-pointer ${
+              isFilterOpen || roleFilter !== "All" || statusFilter !== "All"
+                ? "border-[#155DFC] text-white"
+                : "border-white/5"
+            }`}
+          >
+            <Filter size={18} />
+            <span className="font-medium">Filter</span>
+            {(roleFilter !== "All" || statusFilter !== "All") && (
+              <span className="w-2 h-2 rounded-full bg-[#155DFC]" />
+            )}
+          </button>
+
+          {isFilterOpen && (
+            <>
+              {/* Overlay to close popover */}
+              <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+              
+              <div className="absolute right-0 mt-2 w-64 bg-[#111111]/95 border border-white/10 rounded-2xl p-5 shadow-2xl z-50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-md">
+                <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">Filters</span>
+                  <button
+                    onClick={() => {
+                      setRoleFilter("All");
+                      setStatusFilter("All");
+                    }}
+                    className="text-[10px] text-[#155DFC] hover:underline font-bold"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {/* Role Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Role</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Buyer", "Seller", "Admin"].map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => setRoleFilter(role)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          roleFilter === role
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Filter Pills */}
+                <div className="space-y-2">
+                  <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Status</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["All", "Active", "Suspended"].map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setStatusFilter(status)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          statusFilter === status
+                            ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                            : "bg-black/40 text-zinc-400 hover:text-white border border-white/5"
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Table Container */}
@@ -158,27 +243,31 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3 text-zinc-500">
+                    <div className="flex items-center gap-2 text-zinc-500">
                       <button
                         onClick={() => setSelectedUser(user)}
-                        className="hover:text-white transition-colors cursor-pointer"
+                        className="p-2 bg-black/40 hover:bg-[#155DFC]/20 border border-white/5 hover:border-[#155DFC]/30 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
                         title="View Profile"
                       >
-                        <Eye size={18} />
+                        <Eye size={16} />
                       </button>
                       <button
                         onClick={() => handleToggleStatus(user.userId, user.status)}
-                        className={`transition-colors cursor-pointer ${user.status === "Active" ? "hover:text-red-500" : "hover:text-green-500"}`}
+                        className={`p-2 bg-black/40 border border-white/5 rounded-xl transition-all cursor-pointer ${
+                          user.status === "Active" 
+                            ? "hover:bg-red-500/20 hover:border-red-500/30 text-zinc-400 hover:text-red-500" 
+                            : "hover:bg-green-500/20 hover:border-green-500/30 text-zinc-400 hover:text-green-500"
+                        }`}
                         title={user.status === "Active" ? "Suspend User" : "Activate User"}
                       >
-                        <UserMinus size={18} />
+                        <UserMinus size={16} />
                       </button>
                       <button
                         onClick={() => handleDeleteUser(user.userId)}
-                        className="hover:text-red-600 transition-colors cursor-pointer"
+                        className="p-2 bg-black/40 hover:bg-red-500/20 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer"
                         title="Delete User"
                       >
-                        <ShieldCheck size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
