@@ -15,12 +15,22 @@ import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchDisputes, resolveDispute, rejectDispute, DisputeItem } from "@/app/store/slices/disputesSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
+import Pagination from "@/app/components/Pagination";
 
 export default function DisputesPage() {
   const dispatch = useAppDispatch();
   const { items: disputes, loading } = useAppSelector((state) => state.disputes);
   const [selectedDispute, setSelectedDispute] = useState<DisputeItem | null>(null);
   const { showAlert, showConfirm, showPrompt } = useAlert();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const totalPages = Math.ceil(disputes.length / rowsPerPage);
+  const paginatedDisputes = disputes.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   useEffect(() => {
     dispatch(fetchDisputes());
@@ -80,7 +90,8 @@ export default function DisputesPage() {
             </div>
           </div>
         ) : (
-          disputes.map((dispute: DisputeItem) => (
+          <>
+            {paginatedDisputes.map((dispute: DisputeItem) => (
             <div key={dispute.id} className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between">
@@ -174,7 +185,17 @@ export default function DisputesPage() {
                 </div>
               </div>
             </div>
-          ))
+          ))}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={setRowsPerPage}
+            totalItems={disputes.length}
+            itemNamePlural="disputes"
+          />
+          </>
         )}
       </div>
 

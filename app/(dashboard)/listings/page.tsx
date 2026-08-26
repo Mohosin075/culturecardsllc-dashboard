@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchListings, deleteListing, toggleBoostListing, Listing } from "@/app/store/slices/listingsSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
+import Pagination from "@/app/components/Pagination";
 
 export default function ListingsPage() {
   const dispatch = useAppDispatch();
@@ -41,11 +42,25 @@ export default function ListingsPage() {
     );
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const filteredListings = listings.filter(
     (item: Listing) =>
       item.item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.seller?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredListings.length / rowsPerPage);
+  const paginatedListings = filteredListings.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
   );
 
   const { error } = useAppSelector((state) => state.listings);
@@ -104,7 +119,7 @@ export default function ListingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredListings.map((item) => (
+              {paginatedListings.map((item) => (
                 <tr key={item.id} className="text-zinc-300 hover:bg-white/[0.02] transition-colors group">
                   <td className="px-6 py-4 text-sm font-mono text-zinc-500">{item.id}</td>
                   <td className="px-6 py-4">
@@ -174,6 +189,15 @@ export default function ListingsPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={setRowsPerPage}
+          totalItems={filteredListings.length}
+          itemNamePlural="listings"
+        />
       </div>
 
       {/* Listing Details Modal */}

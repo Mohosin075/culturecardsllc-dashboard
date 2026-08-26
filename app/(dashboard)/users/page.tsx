@@ -8,6 +8,7 @@ import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
 
 import UserProfileModal from "@/app/components/UserProfileModal";
+import Pagination from "@/app/components/Pagination";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
@@ -43,11 +44,25 @@ export default function UsersPage() {
     );
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const filteredUsers = users.filter(
     (user) =>
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
   );
 
   const { error } = useAppSelector((state) => state.users);
@@ -106,7 +121,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredUsers.map((user: User) => (
+              {paginatedUsers.map((user: User) => (
                 <tr key={user.userId} className="text-zinc-300 hover:bg-white/[0.02] transition-colors">
                   <td className="px-6 py-4 text-sm">{user.userId}</td>
                   <td className="px-6 py-4">
@@ -172,6 +187,15 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={setRowsPerPage}
+          totalItems={filteredUsers.length}
+          itemNamePlural="users"
+        />
       </div>
 
       <UserProfileModal user={selectedUser} onClose={() => setSelectedUser(null)} />

@@ -6,6 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchOrders, refundOrder, OrderItem } from "@/app/store/slices/ordersSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
+import Pagination from "@/app/components/Pagination";
 
 export default function OrdersPage() {
   const dispatch = useAppDispatch();
@@ -29,12 +30,26 @@ export default function OrdersPage() {
     );
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const filteredOrders = orders.filter(
     (order: OrderItem) =>
       order.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.buyer?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.seller?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.item?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.ceil(filteredOrders.length / rowsPerPage);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
   );
 
   const { error } = useAppSelector((state) => state.orders);
@@ -92,7 +107,7 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filteredOrders.map((order) => (
+              {paginatedOrders.map((order) => (
                 <tr key={order.id} className="text-zinc-300 hover:bg-white/[0.02] transition-colors">
                   <td className="px-6 py-4 text-sm font-mono text-zinc-500">{order.id}</td>
                   <td className="px-6 py-4">
@@ -160,6 +175,15 @@ export default function OrdersPage() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={setRowsPerPage}
+          totalItems={filteredOrders.length}
+          itemNamePlural="orders"
+        />
       </div>
 
       {/* Order Invoice/Details Modal */}
