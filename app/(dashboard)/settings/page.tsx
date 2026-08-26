@@ -2,21 +2,23 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect } from "react";
-import { Save, Shield, Bell, CreditCard, Percent, Loader2 } from "lucide-react";
+import { Save, Shield, Bell, Percent, Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchSettings, updateSettings } from "@/app/store/slices/settingsSlice";
+import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const { data, loading } = useAppSelector((state) => state.settings);
+  const { showAlert } = useAlert();
 
   const [purchaseCommission, setPurchaseCommission] = useState("5");
   const [tradeCommission, setTradeCommission] = useState("2.5");
   const [paymentProcessor, setPaymentProcessor] = useState("Stripe");
   const [apiKey, setApiKey] = useState("sk_live_••••••••••••••••••••");
   const [testMode, setTestMode] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState("30 minutes");
+  const [sessionTimeout, setSessionTimeout] = useState("30");
   const [toggles, setToggles] = useState({
     newOrder: true,
     dispute: true,
@@ -36,7 +38,7 @@ export default function SettingsPage() {
       setPaymentProcessor(data.paymentGateway?.processor ?? "Stripe");
       setApiKey("sk_live_••••••••••••••••••••");
       setTestMode(!!data.paymentGateway?.testMode);
-      setSessionTimeout(data.securitySettings?.sessionTimeout ?? "30 minutes");
+      setSessionTimeout(String(data.securitySettings?.sessionTimeout ?? "30"));
       setToggles({
         newOrder: data.notificationSettings?.newOrderNotifications ?? true,
         dispute: data.notificationSettings?.disputeAlerts ?? true,
@@ -53,7 +55,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     try {
-      dispatch(
+      await dispatch(
         updateSettings({
           commissionPurchase: parseFloat(purchaseCommission),
           commissionTrade: parseFloat(tradeCommission),
@@ -63,11 +65,11 @@ export default function SettingsPage() {
           toggles,
           sessionTimeout,
         })
-      );
-      alert("Settings saved successfully!");
-    } catch (err) {
+      ).unwrap();
+      showAlert("Settings saved successfully!", "success");
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to save settings.");
+      showAlert(err?.message || "Failed to save settings.", "error");
     }
   };
 
@@ -118,44 +120,6 @@ export default function SettingsPage() {
                 className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-[#155DFC] transition-colors"
               />
               <p className="text-xs text-zinc-600">Commission rate for trades</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Payment Gateway */}
-        <section className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6">
-          <div className="flex items-center gap-2 text-zinc-100">
-            <CreditCard size={20} className="text-blue-500" />
-            <h2 className="text-xl font-semibold">Payment Gateway</h2>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400">Primary Payment Processor</label>
-              <input
-                type="text"
-                value={paymentProcessor}
-                onChange={(e) => setPaymentProcessor(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-[#155DFC] transition-colors"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400">API Key</label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:border-[#155DFC] transition-colors"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="test-mode"
-                checked={testMode}
-                onChange={(e) => setTestMode(e.target.checked)}
-                className="w-4 h-4 rounded border-white/10 bg-black text-[#155DFC] focus:ring-[#155DFC] focus:ring-offset-black"
-              />
-              <label htmlFor="test-mode" className="text-sm font-medium text-zinc-400">Enable Test Mode</label>
             </div>
           </div>
         </section>
@@ -220,12 +184,12 @@ export default function SettingsPage() {
               <select
                 value={sessionTimeout}
                 onChange={(e) => setSessionTimeout(e.target.value)}
-                className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1 text-xs text-zinc-200 focus:outline-none"
+                className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1 text-xs text-zinc-200 focus:outline-none cursor-pointer"
               >
-                <option>30 minutes</option>
-                <option>1 hour</option>
-                <option>4 hours</option>
-                <option>Never</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="240">4 hours</option>
+                <option value="0">Never</option>
               </select>
             </div>
           </div>
@@ -236,7 +200,7 @@ export default function SettingsPage() {
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-[#155DFC] hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+          className="flex items-center gap-2 bg-[#155DFC] hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95 cursor-pointer"
         >
           <Save size={20} />
           <span>Save Settings</span>

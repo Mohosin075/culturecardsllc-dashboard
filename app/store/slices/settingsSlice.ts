@@ -26,7 +26,7 @@ export const updateSettings = createAsyncThunk(
       securitySettings: {
         twoFactorAuthentication: flatSettings.toggles?.twoFactor,
         ipWhitelist: flatSettings.toggles?.ipWhitelist,
-        sessionTimeout: typeof flatSettings.sessionTimeout === "string" ? parseInt(flatSettings.sessionTimeout) || 30 : flatSettings.sessionTimeout,
+        sessionTimeout: typeof flatSettings.sessionTimeout === "string" ? (flatSettings.sessionTimeout === "0" ? 0 : parseInt(flatSettings.sessionTimeout) || 30) : flatSettings.sessionTimeout,
       },
     };
     return await api.dashboard.updateSettings(formattedSettings);

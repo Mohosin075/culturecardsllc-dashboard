@@ -80,12 +80,12 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">System Notifications</h1>
+          <h1 className="text-3xl font-semibold text-white">System Notifications</h1>
           <p className="text-zinc-500 mt-1">{unreadCount} unread notifications</p>
         </div>
         <button
           onClick={handleMarkAllRead}
-          className="bg-[#155DFC] hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          className="bg-[#155DFC] hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer shadow-lg shadow-blue-500/10 active:scale-95"
         >
           Mark All as Read
         </button>
