@@ -91,9 +91,13 @@ export default function OrdersPage() {
   const handleRefund = (order: OrderItem) => {
     showConfirm(
       `Are you sure you want to initiate a full refund for order ${order.id}?`,
-      () => {
-        dispatch(refundOrder({ orderId: order.id, paymentId: order.paymentId }));
-        showAlert(`Refund initiated for order ${order.id}.`, "success");
+      async () => {
+        try {
+          await dispatch(refundOrder({ orderId: order.id, paymentId: order.paymentId })).unwrap();
+          showAlert(`Refund processed successfully for order ${order.id}.`, "success");
+        } catch (err: any) {
+          showAlert(err?.message || `Failed to process refund for order ${order.id}.`, "error");
+        }
       },
       "Initiate Refund"
     );
@@ -320,9 +324,9 @@ export default function OrdersPage() {
                           <RefreshCcw size={16} />
                         </button>
                         <button
-                          onClick={() => showConfirm(`Initiate seller payout of ${typeof order.totalPrice === "number" ? formatCurrency(order.totalPrice) : order.totalPrice} to ${order.seller}?`, () => showAlert(`Payout of ${order.item} processed successfully.`, "success"), "Seller Payout")}
+                          onClick={() => showAlert("Seller payouts are automatically processed and completed via Stripe Connect once the order delivery status changes to 'Delivered'.", "info")}
                           className="p-2 bg-black/40 hover:bg-green-500/20 border border-white/5 hover:border-green-500/30 text-zinc-400 hover:text-green-500 rounded-xl transition-all cursor-pointer"
-                          title="Payout"
+                          title="Payout Info"
                         >
                           <DollarSign size={16} />
                         </button>

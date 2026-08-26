@@ -224,9 +224,13 @@ export default function DisputesPage() {
   const handleResolve = async (disputeId: string) => {
     showConfirm(
       `Are you sure you want to mark dispute ${disputeId} as resolved?`,
-      () => {
-        dispatch(resolveDispute(disputeId));
-        showAlert("Dispute resolved successfully.", "success");
+      async () => {
+        try {
+          await dispatch(resolveDispute(disputeId)).unwrap();
+          showAlert("Dispute resolved successfully.", "success");
+        } catch (err: any) {
+          showAlert(err?.message || "Failed to resolve dispute.", "error");
+        }
       },
       "Resolve Dispute"
     );
@@ -236,9 +240,16 @@ export default function DisputesPage() {
     showPrompt(
       "Reject Dispute",
       "Enter reason for rejection",
-      (reason) => {
-        dispatch(rejectDispute({ id: disputeId, reason }));
-        showAlert("Dispute rejected.", "info");
+      async (reason) => {
+        try {
+          await dispatch(rejectDispute({ 
+            id: disputeId, 
+            reason: reason || "Dispute rejected by moderator" 
+          })).unwrap();
+          showAlert("Dispute rejected successfully.", "success");
+        } catch (err: any) {
+          showAlert(err?.message || "Failed to reject dispute.", "error");
+        }
       },
       "Dispute rejected by moderator"
     );
@@ -482,22 +493,24 @@ export default function DisputesPage() {
                       Chat with Users
                     </button>
                   </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleResolve(dispute.id)}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-600/10 cursor-pointer"
-                    >
-                      <Check size={18} />
-                      Resolve
-                    </button>
-                    <button
-                      onClick={() => handleReject(dispute.id)}
-                      className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-red-600/10 cursor-pointer"
-                    >
-                      <X size={18} />
-                      Reject
-                    </button>
-                  </div>
+                  {dispute.status !== "Resolved" && dispute.status !== "Rejected" && (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleResolve(dispute.id)}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-green-600/10 cursor-pointer"
+                      >
+                        <Check size={18} />
+                        Resolve
+                      </button>
+                      <button
+                        onClick={() => handleReject(dispute.id)}
+                        className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-red-600/10 cursor-pointer"
+                      >
+                        <X size={18} />
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
