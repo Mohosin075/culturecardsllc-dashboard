@@ -61,16 +61,19 @@ const sellerVerificationSlice = createSlice({
       .addCase(fetchSellerVerifications.fulfilled, (state, action) => {
         state.loading = false;
         state.items = (action.payload || [])
-          .filter((req: any) => isObjectId(req.id))
-          .map((req: any) => ({
-            id: req.id,
-            name: req.name || "",
-            email: req.email || "",
-            status: req.status || "Pending",
-            category: req.category || "",
-            submitted: req.submitted || "",
-            documents: req.documents || req.submittedDocuments || [],
-          }));
+          .map((req: any) => {
+            const reqId = req.userId || req._id || req.id || "";
+            return {
+              id: reqId,
+              name: req.name || "",
+              email: req.email || "",
+              status: req.status || "Pending",
+              category: req.category || "",
+              submitted: req.submitted || "",
+              documents: req.documents || req.submittedDocuments || [],
+            };
+          })
+          .filter((req: any) => isObjectId(req.id));
       })
       .addCase(fetchSellerVerifications.rejected, (state, action) => {
         state.loading = false;

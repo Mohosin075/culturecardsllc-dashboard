@@ -13,7 +13,7 @@ export interface DisputeItem {
 }
 
 export const fetchDisputes = createAsyncThunk("disputes/fetchDisputes", async () => {
-  return await api.support.getAll();
+  return await api.dashboard.getDisputes();
 });
 
 export const resolveDispute = createAsyncThunk(
@@ -60,8 +60,8 @@ const disputesSlice = createSlice({
           ? action.payload
           : (action.payload as any)?.data || [];
         state.items = payloadData.map((d: any) => {
-          const reporterName = d.userId?.fullName || d.userId?.name || "Reporter";
-          const reportedName = d.reportedUser?.fullName || d.reportedUser?.name || "Seller";
+          const reporterName = d.usersInvolved?.[0] || d.userId?.fullName || d.userId?.name || "Reporter";
+          const reportedName = d.usersInvolved?.[1] || d.reportedUser?.fullName || d.reportedUser?.name || "Seller";
           const usersMapped = [
             { name: reporterName, color: "bg-blue-500", initial: reporterName.charAt(0).toUpperCase() },
             { name: reportedName, color: "bg-teal-500", initial: reportedName.charAt(0).toUpperCase() }
@@ -71,23 +71,23 @@ const disputesSlice = createSlice({
             ? "Open"
             : (d.status === "under_review" || d.status === "Reviewing" ? "Reviewing" : (d.status === "solved" || d.status === "Resolved" ? "Resolved" : "Rejected"));
 
-          const displayPriority = d.priority
-            ? (d.priority.charAt(0).toUpperCase() + d.priority.slice(1))
+          const displayPriority = d.severity || d.priority
+            ? ((d.severity || d.priority).charAt(0).toUpperCase() + (d.severity || d.priority).slice(1))
             : "Medium";
 
-          const formattedDate = d.createdAt
+          const formattedDate = d.openedOn || (d.createdAt
             ? new Date(d.createdAt).toISOString().split("T")[0]
-            : "-";
+            : "-");
 
           return {
-            id: d._id || d.id || d.disputeId || "",
+            id: d.id || d._id || d.disputeId || "",
             status: displayStatus,
             priority: displayPriority,
             date: formattedDate,
             users: usersMapped,
-            targetId: d.contentId || d.orderOrTradeId || "-",
-            issueType: d.subject || (d.reason === "fraud" ? "Item not as described" : "Wrong item received"),
-            description: d.message || "Defects or trade matching issues reported",
+            targetId: d.orderOrTradeId || d.contentId || "-",
+            issueType: d.issueType || d.subject || (d.reason === "fraud" ? "Item not as described" : "Wrong item received"),
+            description: d.description || d.message || "Defects or trade matching issues reported",
           };
         });
       })
