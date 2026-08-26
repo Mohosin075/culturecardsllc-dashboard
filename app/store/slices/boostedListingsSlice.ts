@@ -11,6 +11,9 @@ export interface BoostedListing {
   impressions: string;
   fee: string;
   status: string;
+  productId?: string;
+  image?: string;
+  price?: number;
 }
 
 export const fetchBoostedListings = createAsyncThunk(
@@ -54,6 +57,9 @@ const boostedListingsSlice = createSlice({
           impressions: item.impressions !== undefined ? (typeof item.impressions === "number" ? new Intl.NumberFormat().format(item.impressions) : item.impressions) : "0",
           fee: item.fee !== undefined ? item.fee : (typeof item.feePaid === "number" ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.feePaid) : (item.feePaid || "$0.00")),
           status: item.status || "Active",
+          productId: item.productId,
+          image: item.image,
+          price: item.price,
         }));
       })
       .addCase(fetchBoostedListings.rejected, (state, action) => {
