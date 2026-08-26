@@ -93,6 +93,46 @@ class ApiClient {
     return data?.data ?? data;
   }
 
+  /**
+   * Send multipart/form-data request — needed for endpoints using multer middleware.
+   * Wraps payload as JSON string in the `data` field so multer can parse it via req.body.data.
+   */
+  private async requestFormData<T>(
+    path: string,
+    payload: Record<string, string>,
+    method: string = "POST"
+  ): Promise<T> {
+    const url = `${BASE_URL}${path}`;
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(payload));
+
+    const headers: HeadersInit = {};
+    if (isClient && this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+    // Note: Do NOT set Content-Type — browser sets it automatically with boundary for multipart
+
+    const res = await fetch(url, { method, body: formData, headers });
+
+    if (!res.ok) {
+      if (res.status === 401 && isClient) {
+        localStorage.removeItem("admin_access_token");
+        this.token = null;
+      }
+      let errorMessage = `HTTP Error ${res.status}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData?.message || errorData?.error || errorMessage;
+      } catch {}
+      this.setLive(res.status < 500);
+      throw new Error(errorMessage);
+    }
+
+    const data = await res.json();
+    this.setLive(true);
+    return data?.data ?? data;
+  }
+
   public setToken(token: string | null) {
     this.token = token;
     if (isClient) {
@@ -214,6 +254,9 @@ class ApiClient {
         method: "PATCH",
         body: JSON.stringify({ reason }),
       }),
+
+    getDisputeChat: (id: string) =>
+      this.request<any>(`/dashboard/disputes/${id}/chat`, { method: "GET" }),
 
     getPayments: () =>
       this.request<any>("/dashboard/payments", { method: "GET" }),
@@ -344,6 +387,19 @@ class ApiClient {
      */
     refund: (paymentId: string) =>
       this.request<any>(`/payment/${paymentId}/refund`, { method: "POST" }),
+  };
+
+  // --- Messaging ---
+  public messages = {
+    getByChatId: (chatId: string) =>
+      this.request<any>(`/message/${chatId}`, { method: "GET" }),
+
+    /**
+     * Send a message via multipart FormData — required because the /message
+     * endpoint uses multer middleware which reads body from req.body.data (JSON string).
+     */
+    send: (chatId: string, text: string) =>
+      this.requestFormData<any>("/message", { chatId, text }),
   };
 }
 
