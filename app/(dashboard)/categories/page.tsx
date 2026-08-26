@@ -25,6 +25,7 @@ import {
 } from "@/app/store/slices/categoriesSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
+import Pagination from "@/app/components/Pagination";
 
 export default function CategoriesPage() {
   const dispatch = useAppDispatch();
@@ -36,6 +37,15 @@ export default function CategoriesPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(6);
+
+  const totalPages = Math.ceil(categories.length / rowsPerPage);
+  const paginatedCategories = categories.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -138,47 +148,62 @@ export default function CategoriesPage() {
             </div>
           </div>
         ) : (
-          categories.map((category: Category) => {
-            const Icon = getIconByName(category.iconName);
-            return (
-              <div key={category.id} className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6">
-                {/* Category Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-300">
-                      <Icon size={24} />
+          <>
+            {paginatedCategories.map((category: Category) => {
+              const Icon = getIconByName(category.iconName);
+              return (
+                <div key={category.id} className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6">
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-300">
+                        <Icon size={24} />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-zinc-100">{category.name}</h2>
+                        <p className="text-sm text-zinc-500">{category.count} listings</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-zinc-100">{category.name}</h2>
-                      <p className="text-sm text-zinc-500">{category.count} listings</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditClick(category)}
+                        className="p-2 bg-black/40 hover:bg-[#155DFC]/20 border border-white/5 hover:border-[#155DFC]/30 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                        title="Edit Category"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCategory(category.id)}
+                        className="p-2 bg-black/40 hover:bg-red-500/20 border border-white/5 hover:border-red-500/30 text-zinc-400 hover:text-red-500 rounded-xl transition-all cursor-pointer"
+                        title="Delete Category"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEditClick(category)}
-                      className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-white transition-colors cursor-pointer"
-                      title="Edit Category"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCategory(category.id)}
-                      className="p-2 hover:bg-red-500/10 rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer"
-                      title="Delete Category"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
 
-                {category.description && (
-                  <div className="text-sm text-zinc-400">
-                    {category.description}
-                  </div>
-                )}
+                  {category.description && (
+                    <div className="text-sm text-zinc-400">
+                      {category.description}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {categories.length > 0 && (
+              <div className="col-span-full mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  rowsPerPage={rowsPerPage}
+                  onRowsPerPageChange={setRowsPerPage}
+                  totalItems={categories.length}
+                  itemNamePlural="categories"
+                />
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 

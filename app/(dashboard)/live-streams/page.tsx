@@ -157,10 +157,10 @@ export default function LiveStreamsPage() {
                   </button>
                   <button
                     onClick={() => handleReportStream(stream.id)}
-                    className={`p-2 rounded-xl transition-all cursor-pointer ${
+                    className={`p-2 rounded-xl transition-all cursor-pointer border ${
                       reportedStreams.includes(stream.id)
-                        ? "bg-red-500/20 text-red-500 border border-red-500/30"
-                        : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200"
+                        ? "bg-red-500/20 text-red-500 border-red-500/30"
+                        : "bg-black/40 text-zinc-400 hover:text-red-500 hover:bg-red-500/10 border-white/5 hover:border-red-500/20"
                     }`}
                     title="Report Live Stream"
                   >
@@ -168,10 +168,10 @@ export default function LiveStreamsPage() {
                   </button>
                   <button
                     onClick={() => handleToggleFavorite(stream.id)}
-                    className={`p-2 rounded-xl transition-all cursor-pointer ${
+                    className={`p-2 rounded-xl transition-all cursor-pointer border ${
                       favoritedStreams.includes(stream.id)
-                        ? "bg-yellow-500/20 text-yellow-500 border border-yellow-500/30"
-                        : "bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200"
+                        ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30"
+                        : "bg-black/40 text-zinc-400 hover:text-yellow-500 hover:bg-yellow-500/10 border-white/5 hover:border-yellow-500/20"
                     }`}
                     title="Favorite Live Stream"
                   >

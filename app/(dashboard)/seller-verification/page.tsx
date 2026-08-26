@@ -121,21 +121,22 @@ export default function SellerVerificationPage() {
               <div className="flex gap-3 pt-4 border-t border-white/5">
                 <button
                   onClick={() => handleApprove(request.id)}
-                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-green-600/10"
+                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-green-600/10 cursor-pointer"
                 >
                   <Check size={18} />
                   Approve
                 </button>
                 <button
                   onClick={() => handleReject(request.id)}
-                  className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-600/10"
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-600/10 cursor-pointer"
                 >
                   <X size={18} />
                   Reject
                 </button>
                 <button
                   onClick={() => showAlert(`Opening verification discussion channel with ${request.name} (${request.email})`, "info")}
-                  className="p-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-xl transition-all"
+                  className="p-2.5 bg-black/40 hover:bg-[#155DFC]/20 border border-white/5 hover:border-[#155DFC]/30 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
+                  title="Chat with Applicant"
                 >
                   <MessageSquare size={18} />
                 </button>
