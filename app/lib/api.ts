@@ -230,8 +230,8 @@ class ApiClient {
     markNotificationsRead: () =>
       this.request<any>("/dashboard/notifications/mark-all-read", { method: "PATCH" }),
 
-    getReports: () =>
-      this.request<any>("/dashboard/reports", { method: "GET" }),
+    getReports: (range?: string) =>
+      this.request<any>(`/dashboard/reports${range ? `?range=${range}` : ""}`, { method: "GET" }),
 
     getSettings: () =>
       this.request<any>("/dashboard/settings", { method: "GET" }),

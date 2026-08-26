@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/app/lib/api";
 
-export const fetchReports = createAsyncThunk("reports/fetchReports", async () => {
-  return await api.dashboard.getReports();
+export const fetchReports = createAsyncThunk("reports/fetchReports", async (range?: string) => {
+  return await api.dashboard.getReports(range);
 });
 
 interface ReportsState {

@@ -36,12 +36,14 @@ export const updateSettings = createAsyncThunk(
 interface SettingsState {
   data: any | null;
   loading: boolean;
+  saving: boolean;
   error: string | null;
 }
 
 const initialState: SettingsState = {
   data: null,
   loading: false,
+  saving: false,
   error: null,
 };
 
@@ -64,14 +66,14 @@ const settingsSlice = createSlice({
         state.error = action.error.message || "Failed to load settings";
       })
       .addCase(updateSettings.pending, (state) => {
-        state.loading = true;
+        state.saving = true;
       })
       .addCase(updateSettings.fulfilled, (state, action) => {
-        state.loading = false;
+        state.saving = false;
         state.data = action.payload;
       })
       .addCase(updateSettings.rejected, (state, action) => {
-        state.loading = false;
+        state.saving = false;
         state.error = action.error.message || "Failed to update settings";
       });
   },

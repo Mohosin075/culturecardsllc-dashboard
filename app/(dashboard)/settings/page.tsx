@@ -10,7 +10,7 @@ import ErrorState from "@/app/components/ErrorState";
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
-  const { data, loading } = useAppSelector((state) => state.settings);
+  const { data, loading, saving } = useAppSelector((state) => state.settings);
   const { showAlert } = useAlert();
 
   const [purchaseCommission, setPurchaseCommission] = useState("5");
@@ -152,58 +152,21 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Security Settings */}
-        <section className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6">
-          <div className="flex items-center gap-2 text-zinc-100">
-            <Shield size={20} className="text-blue-500" />
-            <h2 className="text-xl font-semibold">Security Settings</h2>
-          </div>
-          <div className="space-y-4">
-            {[
-              { key: 'twoFactor', title: 'Two-Factor Authentication', desc: 'Require 2FA for admin access' },
-              { key: 'ipWhitelist', title: 'IP Whitelist', desc: 'Restrict admin access by IP' },
-            ].map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl">
-                <div>
-                  <h4 className="text-sm font-semibold text-zinc-100">{item.title}</h4>
-                  <p className="text-xs text-zinc-500">{item.desc}</p>
-                </div>
-                <button
-                  onClick={() => toggle(item.key as keyof typeof toggles)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${toggles[item.key as keyof typeof toggles] ? 'bg-[#155DFC]' : 'bg-zinc-700'}`}
-                >
-                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${toggles[item.key as keyof typeof toggles] ? 'left-6' : 'left-1'}`} />
-                </button>
-              </div>
-            ))}
-            <div className="flex items-center justify-between p-4 bg-black/40 border border-white/5 rounded-xl">
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Session Timeout</h4>
-                <p className="text-xs text-zinc-500">Auto logout after inactivity</p>
-              </div>
-              <select
-                value={sessionTimeout}
-                onChange={(e) => setSessionTimeout(e.target.value)}
-                className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-1 text-xs text-zinc-200 focus:outline-none cursor-pointer"
-              >
-                <option value="30">30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="240">4 hours</option>
-                <option value="0">Never</option>
-              </select>
-            </div>
-          </div>
-        </section>
       </div>
 
       {/* Save Button */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-[#155DFC] hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95 cursor-pointer"
+          disabled={saving}
+          className="flex items-center gap-2 bg-[#155DFC] hover:bg-blue-600 disabled:bg-blue-800 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
         >
-          <Save size={20} />
-          <span>Save Settings</span>
+          {saving ? (
+            <Loader2 className="animate-spin" size={20} />
+          ) : (
+            <Save size={20} />
+          )}
+          <span>{saving ? "Saving..." : "Save Settings"}</span>
         </button>
       </div>
     </div>
