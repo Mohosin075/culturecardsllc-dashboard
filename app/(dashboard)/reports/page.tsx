@@ -138,47 +138,47 @@ export default function ReportsPage() {
 
   // Safely map backend data
   const summary = data?.summary || {
-    totalSales: 180000,
-    totalSalesChange: "+12.5%",
-    activeUsers: 12540,
-    activeUsersChange: "+19.4%",
-    avgTransaction: 478,
-    avgTransactionChange: "+5.2%",
+    totalSales: 0,
+    totalSalesChange: "+0%",
+    activeUsers: 0,
+    activeUsersChange: "+0%",
+    avgTransaction: 0,
+    avgTransactionChange: "+0%",
   };
 
   const stats = [
     {
       name: "Total Sales",
-      value: `$${summary.totalSales.toLocaleString()}`,
-      growth: summary.totalSalesChange,
+      value: `$${(summary.totalSales || 0).toLocaleString()}`,
+      growth: summary.totalSalesChange || "+0%",
       color: "text-indigo-400",
       bg: "bg-indigo-500/10",
       border: "hover:border-indigo-500/30",
       bgGrad: "bg-gradient-to-r from-indigo-500 to-purple-600",
       shadow: "hover:shadow-[0_0_30px_rgba(99,102,241,0.15)]",
-      isPositive: !summary.totalSalesChange.startsWith("-"),
+      isPositive: !(summary.totalSalesChange || "").startsWith("-"),
     },
     {
       name: "Active Users",
-      value: summary.activeUsers.toLocaleString(),
-      growth: summary.activeUsersChange,
+      value: (summary.activeUsers || 0).toLocaleString(),
+      growth: summary.activeUsersChange || "+0%",
       color: "text-emerald-400",
       bg: "bg-emerald-500/10",
       border: "hover:border-emerald-500/30",
       bgGrad: "bg-gradient-to-r from-emerald-500 to-teal-600",
       shadow: "hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]",
-      isPositive: !summary.activeUsersChange.startsWith("-"),
+      isPositive: !(summary.activeUsersChange || "").startsWith("-"),
     },
     {
       name: "Avg Transaction",
-      value: `$${summary.avgTransaction.toLocaleString()}`,
-      growth: summary.avgTransactionChange,
+      value: `$${(summary.avgTransaction || 0).toLocaleString()}`,
+      growth: summary.avgTransactionChange || "+0%",
       color: "text-amber-400",
       bg: "bg-amber-500/10",
       border: "hover:border-amber-500/30",
       bgGrad: "bg-gradient-to-r from-amber-500 to-orange-600",
       shadow: "hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]",
-      isPositive: !summary.avgTransactionChange.startsWith("-"),
+      isPositive: !(summary.avgTransactionChange || "").startsWith("-"),
     },
   ];
 
@@ -187,37 +187,21 @@ export default function ReportsPage() {
         name: item.category,
         sales: item.amount,
       }))
-    : [
-        { name: "Sneakers", sales: 45000 },
-        { name: "Watches", sales: 80000 },
-        { name: "Cards", sales: 22000 },
-        { name: "Tech", sales: 32000 },
-      ];
+    : [];
 
   const sellerData = data?.topSellers
     ? data.topSellers.map((item: any) => ({
         name: item.name,
         sales: item.salesAmount,
       }))
-    : [
-        { name: "SneakerKing", sales: 12000 },
-        { name: "WatchMaster", sales: 18000 },
-        { name: "CardCollector", sales: 9000 },
-        { name: "TechDeals", sales: 12000 },
-        { name: "LuxuryTime", sales: 25000 },
-      ];
+    : [];
 
   const tradedItemsData = data?.mostTradedItems
     ? data.mostTradedItems.map((item: any) => ({
         name: item.category,
         value: item.percentage,
       }))
-    : [
-        { name: "Sneakers", value: 38 },
-        { name: "Cards", value: 27 },
-        { name: "Tech", value: 21 },
-        { name: "Watches", value: 15 },
-      ];
+    : [];
 
   const engagementData = data?.userEngagement
     ? data.userEngagement.map((item: any) => ({
@@ -225,12 +209,7 @@ export default function ReportsPage() {
         active: item.activeUsers,
         new: item.newUsers,
       }))
-    : [
-        { name: "Jan", active: 8000, new: 1200 },
-        { name: "Feb", active: 9000, new: 1500 },
-        { name: "Mar", active: 10500, new: 1800 },
-        { name: "Apr", active: 12540, new: 2200 },
-      ];
+    : [];
 
   // Table sorting / filtering
   const tableData = activeTab === "categories" ? categoryData : sellerData;
