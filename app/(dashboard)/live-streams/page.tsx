@@ -16,7 +16,7 @@ import LiveStreamModal from "@/app/components/LiveStreamModal";
 
 export default function LiveStreamsPage() {
   const dispatch = useAppDispatch();
-  const { live: liveStreams, scheduled: scheduledStreams, loading } = useAppSelector(
+  const { live: liveStreams, scheduled: scheduledStreams, loading, isInitialLoaded, error } = useAppSelector(
     (state) => state.liveStreams
   );
   const [selectedStream, setSelectedStream] = useState<ScheduledStream | null>(null);
@@ -95,16 +95,14 @@ export default function LiveStreamsPage() {
     );
   };
 
-  const { error } = useAppSelector((state) => state.liveStreams);
-
-  if (loading) {
+  if (loading && !isInitialLoaded) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
         <Loader2 className="animate-spin text-[#155DFC]" size={40} />
       </div>
     );
   }
-  if (error) {
+  if (error && !isInitialLoaded) {
     return <ErrorState message={error} onRetry={() => dispatch(fetchLiveStreams())} />;
   }
 

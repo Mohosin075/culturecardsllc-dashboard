@@ -389,6 +389,14 @@ class ApiClient {
       this.request<any>(`/payment/${paymentId}/refund`, { method: "POST" }),
   };
 
+  // --- Chat ---
+  public chat = {
+    createRoom: (userId: string) =>
+      this.request<any>(`/chat/${userId}`, { method: "POST" }),
+    getRooms: () =>
+      this.request<any>("/chat", { method: "GET" }),
+  };
+
   // --- Messaging ---
   public messages = {
     getByChatId: (chatId: string) =>

@@ -1,6 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/app/lib/api";
 
+export interface VerificationDocument {
+  name: string;
+  url?: string;
+  type?: string;
+}
+
 export interface SellerVerificationRequest {
   id: string;
   name: string;
@@ -8,7 +14,7 @@ export interface SellerVerificationRequest {
   status: string;
   category: string;
   submitted: string;
-  documents: string[];
+  documents: Array<string | VerificationDocument>;
 }
 
 export const fetchSellerVerifications = createAsyncThunk(
@@ -46,8 +52,6 @@ const initialState: SellerVerificationState = {
   error: null,
 };
 
-const isObjectId = (id: string) => /^[0-9a-fA-F]{24}$/.test(id);
-
 const sellerVerificationSlice = createSlice({
   name: "sellerVerification",
   initialState,
@@ -64,16 +68,23 @@ const sellerVerificationSlice = createSlice({
           .map((req: any) => {
             const reqId = req.userId || req._id || req.id || "";
             return {
-              id: reqId,
-              name: req.name || "",
+              id: String(reqId),
+              name: req.name || req.fullName || "Applicant",
               email: req.email || "",
               status: req.status || "Pending",
-              category: req.category || "",
-              submitted: req.submitted || "",
-              documents: req.documents || req.submittedDocuments || [],
+              category: req.category || "General",
+              submitted: req.submitted || req.createdAt ? new Date(req.submitted || req.createdAt).toLocaleDateString() : "Recent",
+              documents: (req.documents || req.submittedDocuments || []).map((d: any) => {
+                if (typeof d === "string") return d;
+                return {
+                  name: d.name || d.title || d.fileName || "Document",
+                  url: d.url || d.fileUrl || d.path || "",
+                  type: d.type || d.fileType || "",
+                };
+              }),
             };
           })
-          .filter((req: any) => isObjectId(req.id));
+          .filter((req: any) => Boolean(req.id && req.id.trim()));
       })
       .addCase(fetchSellerVerifications.rejected, (state, action) => {
         state.loading = false;

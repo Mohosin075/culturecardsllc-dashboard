@@ -81,6 +81,7 @@ interface LiveStreamsState {
   live: LiveStream[];
   scheduled: ScheduledStream[];
   loading: boolean;
+  isInitialLoaded: boolean;
   error: string | null;
 }
 
@@ -88,6 +89,7 @@ const initialState: LiveStreamsState = {
   live: [],
   scheduled: [],
   loading: false,
+  isInitialLoaded: false,
   error: null,
 };
 
@@ -98,13 +100,14 @@ const liveStreamsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchLiveStreams.pending, (state) => {
-        if (state.live.length === 0 && state.scheduled.length === 0) {
+        if (!state.isInitialLoaded) {
           state.loading = true;
         }
         state.error = null;
       })
       .addCase(fetchLiveStreams.fulfilled, (state, action) => {
         state.loading = false;
+        state.isInitialLoaded = true;
         const payload = action.payload;
         state.live = (payload?.currentlyLive || payload?.live || payload?.active || []).map((s: RawLiveStream) => ({
           id: s.id || s._id || s.streamId || "",
@@ -131,6 +134,7 @@ const liveStreamsSlice = createSlice({
       })
       .addCase(fetchLiveStreams.rejected, (state, action) => {
         state.loading = false;
+        state.isInitialLoaded = true;
         state.error = action.error.message || "Failed to load live streams";
       })
       .addCase(cancelScheduledStream.fulfilled, (state, action) => {

@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { Check, X, MessageSquare, FileText, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Check, X, MessageSquare, FileText, Loader2, Eye } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import {
    fetchSellerVerifications,
    approveVerification,
    rejectVerification,
-   SellerVerificationRequest
+   SellerVerificationRequest,
+   VerificationDocument
 } from "@/app/store/slices/sellerVerificationSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
+import DocumentPreviewModal from "@/app/components/DocumentPreviewModal";
+import VerificationChatModal from "@/app/components/VerificationChatModal";
 
 export default function SellerVerificationPage() {
   const dispatch = useAppDispatch();
-  const { items: requests, loading } = useAppSelector((state) => state.sellerVerification);
+  const { items: requests, loading, error } = useAppSelector((state) => state.sellerVerification);
   const { showAlert, showConfirm, showPrompt } = useAlert();
+
+  const [previewRequest, setPreviewRequest] = useState<SellerVerificationRequest | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<string | VerificationDocument | null>(null);
+  const [chatRequest, setChatRequest] = useState<SellerVerificationRequest | null>(null);
 
   useEffect(() => {
     dispatch(fetchSellerVerifications());
@@ -24,9 +31,13 @@ export default function SellerVerificationPage() {
   const handleApprove = async (id: string) => {
     showConfirm(
       "Are you sure you want to approve this seller verification request?",
-      () => {
-        dispatch(approveVerification(id));
-        showAlert("Verification request approved successfully.", "success");
+      async () => {
+        try {
+          await dispatch(approveVerification(id)).unwrap();
+          showAlert("Verification request approved successfully.", "success");
+        } catch (err: any) {
+          showAlert(err?.message || "Failed to approve verification request.", "error");
+        }
       },
       "Approve Seller"
     );
@@ -36,15 +47,22 @@ export default function SellerVerificationPage() {
     showPrompt(
       "Reject Seller Verification",
       "Enter reason for rejection",
-      (reason) => {
-        dispatch(rejectVerification({ id, reason }));
-        showAlert("Verification request rejected.", "info");
+      async (reason) => {
+        try {
+          await dispatch(rejectVerification({ id, reason })).unwrap();
+          showAlert("Verification request rejected.", "info");
+        } catch (err: any) {
+          showAlert(err?.message || "Failed to reject verification request.", "error");
+        }
       },
       "Document not clear"
     );
   };
 
-  const { error } = useAppSelector((state) => state.sellerVerification);
+  const handleOpenDocPreview = (request: SellerVerificationRequest, doc: string | VerificationDocument) => {
+    setPreviewRequest(request);
+    setPreviewDoc(doc);
+  };
 
   if (loading) {
     return (
@@ -108,18 +126,33 @@ export default function SellerVerificationPage() {
               <div className="space-y-3 flex-1">
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Submitted Documents:</p>
                 <div className="space-y-2">
-                  {request.documents?.map((doc: string, i: number) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-black/40 border border-white/5 rounded-xl text-zinc-300 hover:border-white/10 transition-colors cursor-pointer group">
-                      <FileText size={16} className="text-blue-500" />
-                      <span className="text-sm font-medium">{doc}</span>
-                    </div>
-                  ))}
+                  {request.documents?.map((doc: string | VerificationDocument, i: number) => {
+                    const docTitle = typeof doc === "string" ? doc : doc.name;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleOpenDocPreview(request, doc)}
+                        className="w-full flex items-center justify-between p-3 bg-black/40 border border-white/5 hover:border-[#155DFC]/40 hover:bg-[#155DFC]/5 rounded-xl text-zinc-300 transition-all cursor-pointer group text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <FileText size={16} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                          <span className="text-sm font-medium group-hover:text-white transition-colors">{docTitle}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-zinc-500 group-hover:text-blue-400 transition-colors">
+                          <Eye size={14} />
+                          <span className="text-[11px] font-semibold">View</span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-white/5">
                 <button
+                  type="button"
                   onClick={() => handleApprove(request.id)}
                   className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-green-600/10 cursor-pointer"
                 >
@@ -127,6 +160,7 @@ export default function SellerVerificationPage() {
                   Approve
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleReject(request.id)}
                   className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-red-600/10 cursor-pointer"
                 >
@@ -134,7 +168,8 @@ export default function SellerVerificationPage() {
                   Reject
                 </button>
                 <button
-                  onClick={() => showAlert(`Opening verification discussion channel with ${request.name} (${request.email})`, "info")}
+                  type="button"
+                  onClick={() => setChatRequest(request)}
                   className="p-2.5 bg-black/40 hover:bg-[#155DFC]/20 border border-white/5 hover:border-[#155DFC]/30 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Chat with Applicant"
                 >
@@ -145,6 +180,25 @@ export default function SellerVerificationPage() {
           ))}
         </div>
       )}
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        request={previewRequest}
+        docItem={previewDoc}
+        onClose={() => {
+          setPreviewRequest(null);
+          setPreviewDoc(null);
+        }}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
+
+      {/* Verification Direct Chat Modal */}
+      <VerificationChatModal
+        request={chatRequest}
+        onClose={() => setChatRequest(null)}
+      />
     </div>
   );
 }
+
