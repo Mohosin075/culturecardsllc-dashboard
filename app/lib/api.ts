@@ -397,6 +397,17 @@ class ApiClient {
       this.request<any>("/chat", { method: "GET" }),
   };
 
+  // --- Auctions / Live Stream ---
+  public auctions = {
+    getStreams: (status?: string) =>
+      this.request<any>(`/auctions/streams${status ? `?status=${status}` : ""}`, { method: "GET" }),
+    getAgoraToken: (channelName: string, role: string = "subscriber", uid: number = 0) =>
+      this.request<any>(
+        `/auctions/token?channelName=${encodeURIComponent(channelName)}&role=${role}&uid=${uid}`,
+        { method: "GET" }
+      ),
+  };
+
   // --- Messaging ---
   public messages = {
     getByChatId: (chatId: string) =>
