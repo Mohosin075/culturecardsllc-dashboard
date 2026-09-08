@@ -1,0 +1,40 @@
+name: CI/CD Pipeline - CultureCards Dashboard
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Dashboard to AWS EC2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST || '34.225.44.39' }}
+          username: ${{ secrets.SERVER_USER || 'ubuntu' }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            echo '🚀 Deploying CultureCards Dashboard to EC2...'
+            cd /var/www/culturecardsllc-dashboard
+            git fetch origin main
+            git reset --hard origin/main
+            echo 'NEXT_PUBLIC_API_URL=https://api.areisco.com/api/v1' > .env.production
+            npm install
+            npm run build
+            pm2 reload culturecards-dashboard || pm2 restart culturecards-dashboard
+            pm2 save
+            echo '🎉 Dashboard deployed and running live!'
