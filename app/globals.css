@@ -41,3 +41,139 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #444;
 }
+
+/* ==========================================================================
+   SIMPLE, CLEAN & USER-FRIENDLY LEGAL DOCUMENT STYLING
+   ========================================================================== */
+
+.legal-document {
+  max-width: 100%;
+  color: #d4d4d8;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.doc-header {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.doc-header h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.last-updated {
+  font-size: 0.8125rem;
+  color: #71717a;
+  margin-bottom: 0.75rem;
+}
+
+.lead {
+  font-size: 1rem;
+  color: #f4f4f5;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+/* Sections */
+.legal-section {
+  scroll-margin-top: 5rem;
+  margin-bottom: 2rem;
+}
+
+.legal-section h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  padding-bottom: 0.5rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.875rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.legal-section h3 {
+  font-size: 0.975rem;
+  font-weight: 600;
+  color: #60a5fa;
+  margin-top: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.legal-section p {
+  color: #d4d4d8;
+  margin-bottom: 0.875rem;
+  line-height: 1.75;
+}
+
+/* Clean Standard Lists */
+.legal-list {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin: 0.75rem 0 1rem 0;
+  color: #d4d4d8;
+}
+
+.legal-list li {
+  margin-bottom: 0.4rem;
+  line-height: 1.65;
+}
+
+/* Simple Soft Callout Box */
+.summary-box {
+  background: rgba(21, 93, 252, 0.06);
+  border-left: 3px solid #3b82f6;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1.125rem;
+  margin: 1rem 0;
+  color: #bfdbfe;
+  font-size: 0.9rem;
+}
+
+.summary-box p {
+  margin: 0;
+  color: #bfdbfe;
+}
+
+.summary-box p + p {
+  margin-top: 0.5rem;
+}
+
+/* Simple Contact Box */
+.contact-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.contact-box p {
+  margin: 0;
+}
+
+.contact-box p + p {
+  margin-top: 0.75rem;
+}
+
+.contact-box a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.contact-box a:hover {
+  color: #93c5fd;
+}
+
+/* Simple Notice */
+.notice {
+  font-size: 0.875rem;
+  font-style: italic;
+  color: #a1a1aa;
+  margin: 0.75rem 0;
+}
