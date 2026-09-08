@@ -19,6 +19,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api, useApiStatus } from "@/app/lib/api";
@@ -37,6 +38,7 @@ const menuItems = [
   { name: "Categories", icon: LayoutGrid, href: "/categories" },
   { name: "Notifications", icon: Bell, href: "/notifications" },
   { name: "Reports", icon: BarChart3, href: "/reports" },
+  { name: "Terms & Privacy", icon: FileText, href: "/legal" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
 

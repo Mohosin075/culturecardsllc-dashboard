@@ -420,6 +420,17 @@ class ApiClient {
     send: (chatId: string, text: string) =>
       this.requestFormData<any>("/message", { chatId, text }),
   };
+
+  // --- Legal / Public Documents ---
+  public legal = {
+    get: (type: "privacy-policy" | "terms-and-condition") =>
+      this.request<any>(`/public/${type}`, { method: "GET" }),
+    update: (type: "privacy-policy" | "terms-and-condition", content: string) =>
+      this.request<any>("/public", {
+        method: "POST",
+        body: JSON.stringify({ type, content }),
+      }),
+  };
 }
 
 export const api = new ApiClient();
