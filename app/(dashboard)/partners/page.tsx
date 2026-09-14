@@ -10,12 +10,15 @@ import {
   ExternalLink,
   Users,
   DollarSign,
-  TrendingUp,
   Landmark,
   Download,
   Sparkles,
   ShieldCheck,
   RefreshCw,
+  Mail,
+  Eye,
+  X,
+  CreditCard,
 } from "lucide-react";
 import { api } from "@/app/lib/api";
 
@@ -44,6 +47,13 @@ export default function AdminPartnersPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedNotification, setCopiedNotification] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Bank Info Modal state
+  const [selectedPartnerForBank, setSelectedPartnerForBank] = useState<Partner | null>(null);
+  const [copiedBankInfo, setCopiedBankInfo] = useState(false);
+
+  // Email sending state
+  const [sendingEmailId, setSendingEmailId] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -83,6 +93,27 @@ export default function AdminPartnersPage() {
     setTimeout(() => setCopiedNotification(null), 4000);
   };
 
+  const handleSendEmail = async (partner: Partner) => {
+    try {
+      setSendingEmailId(partner._id);
+      await api.partners.sendEmail(partner._id);
+      setCopiedNotification(`Magic link & promo code successfully emailed to ${partner.email}!`);
+      setTimeout(() => setCopiedNotification(null), 4000);
+    } catch (err: any) {
+      alert("Failed to send email: " + (err?.message || "Unknown error"));
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
+
+  const handleCopyFullBankInfo = (partner: Partner) => {
+    if (!partner.bankDetails) return;
+    const infoText = `Partner: ${partner.name} (${partner.email})\nBank Name: ${partner.bankDetails.bankName || 'N/A'}\nAccount Holder: ${partner.bankDetails.accountHolderName || 'N/A'}\nRouting Number: ${partner.bankDetails.routingNumber || 'N/A'}\nAccount Number: ${partner.bankDetails.accountNumber || 'N/A'}`;
+    navigator.clipboard.writeText(infoText);
+    setCopiedBankInfo(true);
+    setTimeout(() => setCopiedBankInfo(false), 2500);
+  };
+
   const handleCreatePartner = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
@@ -92,6 +123,8 @@ export default function AdminPartnersPage() {
       await api.partners.create(formData);
       setIsModalOpen(false);
       setFormData({ name: "", email: "", promoCode: "", revenueSharePercentage: 50 });
+      setCopiedNotification(`Partner ${formData.name} created! Magic link emailed automatically.`);
+      setTimeout(() => setCopiedNotification(null), 4000);
       await fetchPartners();
     } catch (err: any) {
       setFormError(err?.response?.data?.message || err.message || "Failed to create partner");
@@ -103,7 +136,7 @@ export default function AdminPartnersPage() {
   const exportToCSV = () => {
     if (!partners.length) return;
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const headers = ["Name", "Email", "Promo Code", "Share %", "Referred Users", "Total Earnings ($)", "Bank Setup", "Magic Link"];
+    const headers = ["Name", "Email", "Promo Code", "Share %", "Referred Users", "Total Earnings ($)", "Bank Holder", "Bank Name", "Routing No", "Account No", "Magic Link"];
     const rows = partners.map(p => [
       `"${p.name}"`,
       `"${p.email}"`,
@@ -111,7 +144,10 @@ export default function AdminPartnersPage() {
       `${p.revenueSharePercentage}%`,
       p.totalReferredUsers || 0,
       (p.totalEarnings || 0).toFixed(2),
-      p.bankDetails?.accountNumber ? "Configured" : "Pending",
+      `"${p.bankDetails?.accountHolderName || ''}"`,
+      `"${p.bankDetails?.bankName || ''}"`,
+      `"${p.bankDetails?.routingNumber || ''}"`,
+      `"${p.bankDetails?.accountNumber || ''}"`,
       `"${origin}/partner/dashboard?token=${p.accessToken}"`
     ]);
 
@@ -125,14 +161,12 @@ export default function AdminPartnersPage() {
     document.body.removeChild(link);
   };
 
-  // Filter partners based on search query
   const filteredPartners = partners.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.promoCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Compute Total Metrics
   const totalReferredUsersAll = partners.reduce((sum, p) => sum + (p.totalReferredUsers || 0), 0);
   const totalPartnerEarningsAll = partners.reduce((sum, p) => sum + (p.totalEarnings || 0), 0);
   const activeBankCount = partners.filter(p => p.bankDetails?.accountNumber).length;
@@ -157,7 +191,7 @@ export default function AdminPartnersPage() {
             </span>
           </div>
           <p className="text-xs text-zinc-400 mt-1">
-            Manage influencers, track promo codes, magic link access, and automated revenue share payouts.
+            Manage influencers, send magic portal links via email, copy bank payout details, and track promo codes.
           </p>
         </div>
 
@@ -264,14 +298,6 @@ export default function AdminPartnersPage() {
             <p className="text-xs text-zinc-500">
               {searchQuery ? "Try resetting your search query filter." : "Click 'Add New Partner' to create your first partner."}
             </p>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="mt-2 text-xs text-[#155DFC] hover:underline"
-              >
-                Clear Search Filter
-              </button>
-            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -314,10 +340,15 @@ export default function AdminPartnersPage() {
                     </td>
                     <td className="py-4 px-4 text-xs">
                       {partner.bankDetails?.accountNumber ? (
-                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-[11px] w-fit">
+                        <button
+                          onClick={() => setSelectedPartnerForBank(partner)}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 font-mono text-[11px] transition-all group/bank cursor-pointer"
+                          title="Click to view & copy full bank details"
+                        >
                           <Landmark size={12} />
                           <span>{partner.bankDetails.accountNumber}</span>
-                        </div>
+                          <Eye size={12} className="opacity-0 group-hover/bank:opacity-100 transition-opacity ml-1 text-emerald-300" />
+                        </button>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px]">
                           Pending Setup
@@ -326,6 +357,18 @@ export default function AdminPartnersPage() {
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {/* Send Email Button */}
+                        <button
+                          onClick={() => handleSendEmail(partner)}
+                          disabled={sendingEmailId === partner._id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-300 border border-purple-500/20 text-xs font-semibold transition-all disabled:opacity-50"
+                          title="Email Magic Link to Partner"
+                        >
+                          <Mail size={14} className={sendingEmailId === partner._id ? "animate-bounce" : ""} />
+                          <span>{sendingEmailId === partner._id ? "Sending..." : "Send Email"}</span>
+                        </button>
+
+                        {/* Copy Link Button */}
                         <button
                           onClick={() => handleCopyLink(partner.accessToken, partner._id, partner.name)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-zinc-200 border border-white/10 transition-all hover:border-[#155DFC]/40"
@@ -343,6 +386,8 @@ export default function AdminPartnersPage() {
                             </>
                           )}
                         </button>
+
+                        {/* Open Portal Link */}
                         <a
                           href={`/partner/dashboard?token=${partner.accessToken}`}
                           target="_blank"
@@ -362,6 +407,56 @@ export default function AdminPartnersPage() {
         )}
       </div>
 
+      {/* View & Copy Bank Details Modal */}
+      {selectedPartnerForBank && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#141414] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Landmark size={18} className="text-emerald-400" />
+                Bank Payout Details ({selectedPartnerForBank.name})
+              </h2>
+              <button
+                onClick={() => setSelectedPartnerForBank(null)}
+                className="text-zinc-400 hover:text-white transition-colors text-sm w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="bg-black/50 border border-white/10 rounded-xl p-4 space-y-3 font-mono text-xs">
+              <div className="flex justify-between border-b border-white/5 pb-2">
+                <span className="text-zinc-400">Account Holder:</span>
+                <span className="text-white font-bold">{selectedPartnerForBank.bankDetails?.accountHolderName || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2">
+                <span className="text-zinc-400">Bank Name:</span>
+                <span className="text-white font-bold">{selectedPartnerForBank.bankDetails?.bankName || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-2">
+                <span className="text-zinc-400">US Routing Number:</span>
+                <span className="text-emerald-400 font-bold">{selectedPartnerForBank.bankDetails?.routingNumber || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Account Number:</span>
+                <span className="text-emerald-400 font-bold">{selectedPartnerForBank.bankDetails?.accountNumber || 'N/A'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <span className="text-[11px] text-zinc-500">🔒 Use these details for weekly payouts</span>
+              <button
+                onClick={() => handleCopyFullBankInfo(selectedPartnerForBank)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-emerald-600/20"
+              >
+                {copiedBankInfo ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copiedBankInfo ? "Copied All Details!" : "Copy All Info"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Partner Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -375,7 +470,7 @@ export default function AdminPartnersPage() {
                 onClick={() => setIsModalOpen(false)}
                 className="text-zinc-400 hover:text-white transition-colors text-sm w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center"
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
@@ -427,11 +522,6 @@ export default function AdminPartnersPage() {
                   onChange={(e) => setFormData({ ...formData, promoCode: e.target.value.toUpperCase() })}
                   className="w-full bg-black/50 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono uppercase text-white focus:outline-none focus:border-[#155DFC]"
                 />
-                {formData.promoCode && (
-                  <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1 font-mono">
-                    <Check size={12} /> Promo Code: <span className="font-bold">{formData.promoCode}</span>
-                  </p>
-                )}
               </div>
 
               <div>
@@ -462,7 +552,7 @@ export default function AdminPartnersPage() {
                   disabled={submitting}
                   className="px-5 py-2.5 bg-[#155DFC] hover:bg-[#155DFC]/90 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-[#155DFC]/20"
                 >
-                  {submitting ? "Generating Magic Link..." : "Create Partner & Magic Link"}
+                  {submitting ? "Sending Email..." : "Create & Send Magic Email"}
                 </button>
               </div>
             </form>

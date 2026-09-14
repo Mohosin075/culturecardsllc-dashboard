@@ -450,6 +450,8 @@ class ApiClient {
       this.request<any>(`/partner/dashboard?token=${encodeURIComponent(token)}`, {
         method: "GET",
       }),
+    sendEmail: (partnerId: string) =>
+      this.request<any>(`/partner/${partnerId}/send-email`, { method: "POST" }),
     updateBankDetails: (
       token: string,
       data: {

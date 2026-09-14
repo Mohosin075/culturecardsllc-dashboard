@@ -71,6 +71,8 @@ function PartnerDashboardContent() {
   const [error, setError] = useState("");
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedBankInfo, setCopiedBankInfo] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [chartType, setChartType] = useState<"bar" | "area">("bar");
 
   // Bank Form state
@@ -108,10 +110,16 @@ function PartnerDashboardContent() {
     fetchDashboard();
   }, [token]);
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const handleCopyCode = () => {
     if (!data?.partnerInfo.promoCode) return;
     navigator.clipboard.writeText(data.partnerInfo.promoCode);
     setCopiedCode(true);
+    showToast(`Promo code '${data.partnerInfo.promoCode}' copied to clipboard!`);
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
@@ -119,8 +127,19 @@ function PartnerDashboardContent() {
     if (typeof window !== "undefined") {
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
+      showToast("Private partner portal link copied to clipboard!");
       setTimeout(() => setCopiedLink(false), 2500);
     }
+  };
+
+  const handleCopyBankDetails = () => {
+    if (!data?.partnerInfo.bankDetails?.accountNumber) return;
+    const b = data.partnerInfo.bankDetails;
+    const info = `Bank: ${b.bankName || 'N/A'}, Holder: ${b.accountHolderName || 'N/A'}, Routing: ${b.routingNumber || 'N/A'}, Account: ${b.accountNumber}`;
+    navigator.clipboard.writeText(info);
+    setCopiedBankInfo(true);
+    showToast("Bank details copied to clipboard!");
+    setTimeout(() => setCopiedBankInfo(false), 2500);
   };
 
   const handleBankSubmit = async (e: React.FormEvent) => {
@@ -133,6 +152,7 @@ function PartnerDashboardContent() {
     try {
       await api.partners.updateBankDetails(token, bankForm);
       setBankSuccess(true);
+      showToast("Bank payout information saved securely!");
       setBankForm({ accountHolderName: "", bankName: "", routingNumber: "", accountNumber: "" });
       await fetchDashboard();
     } catch (err: any) {
@@ -169,6 +189,14 @@ function PartnerDashboardContent() {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans antialiased">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 border border-emerald-400/30 animate-in fade-in slide-in-from-top-3">
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Top Partner Navbar */}
       <header className="border-b border-white/10 bg-[#0d0d0d]/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -198,7 +226,11 @@ function PartnerDashboardContent() {
 
             <button
               onClick={handleCopyPortalLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold border border-white/10 transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                copiedLink
+                  ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                  : "bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10"
+              }`}
             >
               {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
               <span>{copiedLink ? "Link Copied!" : "Portal Link"}</span>
@@ -230,7 +262,11 @@ function PartnerDashboardContent() {
             </div>
             <button
               onClick={handleCopyCode}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[#155DFC] hover:bg-[#155DFC]/90 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-[#155DFC]/20"
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold rounded-xl transition-all shadow-lg ${
+                copiedCode
+                  ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                  : "bg-[#155DFC] hover:bg-[#155DFC]/90 text-white shadow-[#155DFC]/20"
+              }`}
             >
               {copiedCode ? (
                 <>
@@ -294,7 +330,7 @@ function PartnerDashboardContent() {
           </div>
         </div>
 
-        {/* Real-time Side-by-Side Revenue Graph */}
+        {/* Real-time Side-by-Side Premium Revenue Graph */}
         <div className="bg-[#111111] border border-white/5 p-6 rounded-2xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -311,7 +347,7 @@ function PartnerDashboardContent() {
               <button
                 onClick={() => setChartType("bar")}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  chartType === "bar" ? "bg-[#155DFC] text-white" : "text-zinc-400 hover:text-white"
+                  chartType === "bar" ? "bg-[#155DFC] text-white shadow-md shadow-[#155DFC]/30" : "text-zinc-400 hover:text-white"
                 }`}
               >
                 <BarChart3 size={13} />
@@ -320,7 +356,7 @@ function PartnerDashboardContent() {
               <button
                 onClick={() => setChartType("area")}
                 className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  chartType === "area" ? "bg-[#155DFC] text-white" : "text-zinc-400 hover:text-white"
+                  chartType === "area" ? "bg-[#155DFC] text-white shadow-md shadow-[#155DFC]/30" : "text-zinc-400 hover:text-white"
                 }`}
               >
                 <LineChart size={13} />
@@ -334,23 +370,46 @@ function PartnerDashboardContent() {
               No transaction history recorded yet. Share your code <strong className="text-white mx-1">{partnerInfo.promoCode}</strong> to start earning!
             </div>
           ) : (
-            <div className="h-72 w-full">
+            <div className="h-80 w-full pt-4">
               <ResponsiveContainer width="100%" height="100%">
                 {chartType === "bar" ? (
-                  <BarChart data={realtimeGraphData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} />
-                    <YAxis stroke="#71717a" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                  <BarChart data={realtimeGraphData} margin={{ top: 20, right: 30, left: 10, bottom: 10 }} barGap={12} barCategoryGap="30%">
+                    <defs>
+                      <linearGradient id="barGradPartner" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="barGradOwner" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.8} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222222" vertical={false} />
+                    <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} axisLine={{ stroke: '#333' }} />
+                    <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={{ stroke: '#333' }} tickFormatter={(val) => `$${val}`} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "12px" }}
-                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, ""]}
+                      contentStyle={{ backgroundColor: "#141414", border: "1px solid #333333", borderRadius: "12px", boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5)" }}
+                      cursor={{ fill: "rgba(255, 255, 255, 0.03)" }}
+                      formatter={(value: any, name: any) => [`$${Number(value).toFixed(2)}`, name]}
                     />
-                    <Legend />
-                    <Bar dataKey="partnerEarnings" name="Your Earnings (50%)" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="ownerEarnings" name="Platform Share (50%)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    <Legend wrapperStyle={{ paddingTop: "12px" }} />
+                    <Bar
+                      dataKey="partnerEarnings"
+                      name={`Your Earnings (${partnerInfo.revenueSharePercentage}%)`}
+                      fill="url(#barGradPartner)"
+                      maxBarSize={48}
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="ownerEarnings"
+                      name={`Platform Share (${100 - partnerInfo.revenueSharePercentage}%)`}
+                      fill="url(#barGradOwner)"
+                      maxBarSize={48}
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 ) : (
-                  <AreaChart data={realtimeGraphData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+                  <AreaChart data={realtimeGraphData} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
                     <defs>
                       <linearGradient id="colorPartner" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
@@ -361,16 +420,32 @@ function PartnerDashboardContent() {
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                    <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} />
-                    <YAxis stroke="#71717a" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#222222" vertical={false} />
+                    <XAxis dataKey="date" stroke="#71717a" fontSize={12} tickLine={false} axisLine={{ stroke: '#333' }} />
+                    <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={{ stroke: '#333' }} tickFormatter={(val) => `$${val}`} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#18181b", border: "1px solid #27272a", borderRadius: "12px" }}
-                      formatter={(value: any) => [`$${Number(value).toFixed(2)}`, ""]}
+                      contentStyle={{ backgroundColor: "#141414", border: "1px solid #333333", borderRadius: "12px" }}
+                      formatter={(value: any, name: any) => [`$${Number(value).toFixed(2)}`, name]}
                     />
-                    <Legend />
-                    <Area type="monotone" dataKey="partnerEarnings" name="Your Earnings (50%)" stroke="#10b981" fillOpacity={1} fill="url(#colorPartner)" />
-                    <Area type="monotone" dataKey="ownerEarnings" name="Platform Share (50%)" stroke="#3b82f6" fillOpacity={1} fill="url(#colorOwner)" />
+                    <Legend wrapperStyle={{ paddingTop: "12px" }} />
+                    <Area
+                      type="monotone"
+                      dataKey="partnerEarnings"
+                      name={`Your Earnings (${partnerInfo.revenueSharePercentage}%)`}
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorPartner)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="ownerEarnings"
+                      name={`Platform Share (${100 - partnerInfo.revenueSharePercentage}%)`}
+                      stroke="#3b82f6"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorOwner)"
+                    />
                   </AreaChart>
                 )}
               </ResponsiveContainer>
@@ -391,10 +466,18 @@ function PartnerDashboardContent() {
               </p>
             </div>
             {partnerInfo.bankDetails?.accountNumber && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                <CheckCircle2 size={13} />
-                Current: {partnerInfo.bankDetails.accountNumber}
-              </span>
+              <button
+                onClick={handleCopyBankDetails}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
+                  copiedBankInfo
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                    : "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20"
+                }`}
+                title="Click to copy bank details"
+              >
+                {copiedBankInfo ? <Check size={14} /> : <Copy size={13} />}
+                <span>{copiedBankInfo ? "Bank Details Copied!" : `Current: ${partnerInfo.bankDetails.accountNumber}`}</span>
+              </button>
             )}
           </div>
 
