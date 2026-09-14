@@ -431,6 +431,39 @@ class ApiClient {
         body: JSON.stringify({ type, content }),
       }),
   };
+
+  // --- Partners & Affiliates ---
+  public partners = {
+    create: (data: {
+      name: string;
+      email: string;
+      promoCode: string;
+      revenueSharePercentage?: number;
+    }) =>
+      this.request<any>("/partner/create", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    getAll: () =>
+      this.request<any>("/partner/all", { method: "GET" }),
+    getDashboard: (token: string) =>
+      this.request<any>(`/partner/dashboard?token=${encodeURIComponent(token)}`, {
+        method: "GET",
+      }),
+    updateBankDetails: (
+      token: string,
+      data: {
+        accountNumber: string;
+        routingNumber?: string;
+        bankName?: string;
+        accountHolderName?: string;
+      }
+    ) =>
+      this.request<any>(`/partner/bank-details?token=${encodeURIComponent(token)}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+  };
 }
 
 export const api = new ApiClient();

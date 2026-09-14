@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Handshake,
   Users,
   ShieldCheck,
   Package,
@@ -38,6 +39,7 @@ const menuItems = [
   { name: "Categories", icon: LayoutGrid, href: "/categories" },
   { name: "Notifications", icon: Bell, href: "/notifications" },
   { name: "Reports", icon: BarChart3, href: "/reports" },
+  { name: "Partners", icon: Handshake, href: "/partners" },
   { name: "Terms & Privacy", icon: FileText, href: "/legal" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];
