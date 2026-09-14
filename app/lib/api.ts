@@ -25,7 +25,7 @@ const getBaseUrl = () => {
   return "https://api.areisco.com/api/v1";
 };
 
-const BASE_URL = getBaseUrl();
+// BASE_URL dynamically evaluated via getBaseUrl()
 
 class ApiClient {
   public isLive = false;
@@ -52,7 +52,7 @@ class ApiClient {
 
   public async ping(): Promise<boolean> {
     try {
-      const res = await fetch(`${BASE_URL}/category/popular-categories`, {
+      const res = await fetch(`${getBaseUrl()}/category/popular-categories`, {
         method: "GET",
         headers: {
           "Cache-Control": "no-cache",
@@ -174,7 +174,7 @@ class ApiClient {
   public auth = {
     login: async (email: string, password: string) => {
       // Try admin login first
-      const res = await fetch(`${BASE_URL}/auth/admin-login`, {
+      const res = await fetch(`${getBaseUrl()}/auth/admin-login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -183,7 +183,7 @@ class ApiClient {
 
       if (!res.ok) {
         // Try regular login as fallback
-        const resUser = await fetch(`${BASE_URL}/auth/login`, {
+        const resUser = await fetch(`${getBaseUrl()}/auth/login`, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -222,7 +222,7 @@ class ApiClient {
     logout: async () => {
       if (isClient && this.token) {
         try {
-          await fetch(`${BASE_URL}/auth/logout`, {
+          await fetch(`${getBaseUrl()}/auth/logout`, {
             method: "POST",
             credentials: "include",
             headers: this.getHeaders(),
