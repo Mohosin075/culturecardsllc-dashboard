@@ -4,11 +4,25 @@
 const isClient = typeof window !== "undefined";
 
 const getBaseUrl = () => {
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    return `http://${hostname}:5001/api/v1`;
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+  if (typeof window !== "undefined") {
+    const { protocol, hostname } = window.location;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+      /^192\.168\.\d+\.\d+$/.test(hostname)
+    ) {
+      return `http://${hostname}:5001/api/v1`;
+    }
+    if (hostname.includes("areisco.com")) {
+      return `${protocol}//api.areisco.com/api/v1`;
+    }
+    return `${protocol}//${hostname}/api/v1`;
+  }
+  return "https://api.areisco.com/api/v1";
 };
 
 const BASE_URL = getBaseUrl();
