@@ -138,10 +138,37 @@ export default function AdminPartnersPage() {
     }
   };
 
+
+const copyToClipboard = (text: string) => {
+  if (typeof window === "undefined") return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+};
+
+const fallbackCopy = (text: string) => {
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textArea);
+  } catch (err) {
+    console.error("Fallback copy failed", err);
+  }
+};
+
   const handleCopyLink = (token: string, partnerId: string, partnerName: string) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const magicUrl = origin + "/partner/dashboard?token=" + token;
-    navigator.clipboard.writeText(magicUrl);
+    copyToClipboard(magicUrl);
     setCopiedId(partnerId);
     setCopiedNotification("Magic link for " + partnerName + " copied to clipboard!");
     setTimeout(() => setCopiedId(null), 2500);
@@ -164,7 +191,7 @@ export default function AdminPartnersPage() {
   const handleCopyFullBankInfo = (partner: Partner) => {
     if (!partner.bankDetails) return;
     const infoText = "Partner: " + partner.name + " (" + partner.email + ")\nBank Name: " + (partner.bankDetails.bankName || 'N/A') + "\nAccount Holder: " + (partner.bankDetails.accountHolderName || 'N/A') + "\nRouting Number: " + (partner.bankDetails.routingNumber || 'N/A') + "\nAccount Number: " + (partner.bankDetails.accountNumber || 'N/A');
-    navigator.clipboard.writeText(infoText);
+    copyToClipboard(infoText);
     setCopiedBankInfo(true);
     setTimeout(() => setCopiedBankInfo(false), 2500);
   };

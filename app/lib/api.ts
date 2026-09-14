@@ -3,7 +3,15 @@
 // Check if window is defined (Next.js SSR safety)
 const isClient = typeof window !== "undefined";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007/api/v1";
+const getBaseUrl = () => {
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    return `http://${hostname}:5001/api/v1`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api/v1";
+};
+
+const BASE_URL = getBaseUrl();
 
 class ApiClient {
   public isLive = false;
@@ -62,7 +70,7 @@ class ApiClient {
     path: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${BASE_URL}${path}`;
+    const url = `${getBaseUrl()}${path}`;
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -102,7 +110,7 @@ class ApiClient {
     payload: Record<string, string>,
     method: string = "POST"
   ): Promise<T> {
-    const url = `${BASE_URL}${path}`;
+    const url = `${getBaseUrl()}${path}`;
     const formData = new FormData();
     formData.append("data", JSON.stringify(payload));
 
@@ -446,10 +454,25 @@ class ApiClient {
       }),
     getAll: () =>
       this.request<any>("/partner/all", { method: "GET" }),
-    getDashboard: (token: string) =>
-      this.request<any>(`/partner/dashboard?token=${encodeURIComponent(token)}`, {
-        method: "GET",
+    requestOTP: (token: string) =>
+      this.request<any>("/partner/request-otp", {
+        method: "POST",
+        body: JSON.stringify({ token }),
       }),
+    verifyOTP: (token: string, otp: string) =>
+      this.request<any>("/partner/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ token, otp }),
+      }),
+    getDashboard: (token: string, otpToken?: string) =>
+      this.request<any>(
+        `/partner/dashboard?token=${encodeURIComponent(token)}${
+          otpToken ? `&otpToken=${encodeURIComponent(otpToken)}` : ""
+        }`,
+        {
+          method: "GET",
+        }
+      ),
     sendEmail: (partnerId: string) =>
       this.request<any>(`/partner/${partnerId}/send-email`, { method: "POST" }),
     updateBankDetails: (

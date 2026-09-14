@@ -75,6 +75,16 @@ function PartnerDashboardContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [chartType, setChartType] = useState<"bar" | "area">("bar");
 
+  // OTP Verification state
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [otpSubmitting, setOtpSubmitting] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [otpSuccess, setOtpSuccess] = useState("");
+
+
   // Bank Form state
   const [bankForm, setBankForm] = useState({
     accountHolderName: "",
@@ -86,7 +96,7 @@ function PartnerDashboardContent() {
   const [bankSuccess, setBankSuccess] = useState(false);
   const [bankError, setBankError] = useState("");
 
-  const fetchDashboard = async () => {
+    const fetchDashboard = async () => {
     if (!token) {
       setError("No access token provided. Please use your private magic link.");
       setLoading(false);
@@ -96,7 +106,19 @@ function PartnerDashboardContent() {
     try {
       setLoading(true);
       setError("");
-      const res = await api.partners.getDashboard(token);
+      const savedOtpToken = typeof window !== "undefined" ? sessionStorage.getItem(`partner_otp_${token}`) : null;
+      const res = await api.partners.getDashboard(token, savedOtpToken || undefined);
+
+      if (res?.otpRequired) {
+        setOtpRequired(true);
+        setMaskedEmail(res.emailMasked || "");
+        // Auto trigger request OTP if not sent yet
+        handleRequestOTP();
+        setLoading(false);
+        return;
+      }
+
+      setOtpRequired(false);
       const dashboardData = res?.data || res;
       setData(dashboardData);
     } catch (err: any) {
@@ -104,6 +126,83 @@ function PartnerDashboardContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRequestOTP = async () => {
+    if (!token) return;
+    try {
+      setOtpSending(true);
+      setOtpError("");
+      const res = await api.partners.requestOTP(token);
+      if (res?.emailMasked) setMaskedEmail(res.emailMasked);
+      setOtpSuccess("A 6-digit verification code has been sent to your email.");
+      setTimeout(() => setOtpSuccess(""), 4000);
+    } catch (err: any) {
+      setOtpError(err?.message || "Failed to send OTP email.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const fullOtp = otpDigits.join("");
+    if (fullOtp.length !== 6) {
+      setOtpError("Please enter all 6 digits of the code.");
+      return;
+    }
+
+    try {
+      setOtpSubmitting(true);
+      setOtpError("");
+      const res = await api.partners.verifyOTP(token!, fullOtp);
+      if (res?.otpToken) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`partner_otp_${token}`, res.otpToken);
+        }
+        setOtpRequired(false);
+        showToast("Identity verified successfully!");
+        fetchDashboard();
+      }
+    } catch (err: any) {
+      setOtpError(err?.message || "Invalid OTP code. Please try again.");
+    } finally {
+      setOtpSubmitting(false);
+    }
+  };
+
+  const handleOtpDigitChange = (index: number, val: string) => {
+    if (!/^\d*$/.test(val)) return;
+    const next = [...otpDigits];
+    next[index] = val.slice(-1);
+    setOtpDigits(next);
+
+    // Auto advance focus
+    if (val && index < 5) {
+      const nextInput = document.getElementById(`otp-input-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-input-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = ["", "", "", "", "", ""];
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i];
+    }
+    setOtpDigits(next);
+    const targetIdx = Math.min(pasted.length, 5);
+    const el = document.getElementById(`otp-input-${targetIdx}`);
+    if (el) el.focus();
   };
 
   useEffect(() => {
@@ -115,9 +214,36 @@ function PartnerDashboardContent() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+
+  const copyToClipboard = (text: string) => {
+    if (typeof window === "undefined") return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  };
+
+  const fallbackCopy = (text: string) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+    } catch (err) {
+      console.error("Fallback copy failed", err);
+    }
+  };
+
   const handleCopyCode = () => {
     if (!data?.partnerInfo.promoCode) return;
-    navigator.clipboard.writeText(data.partnerInfo.promoCode);
+    copyToClipboard(data.partnerInfo.promoCode);
     setCopiedCode(true);
     showToast(`Promo code '${data.partnerInfo.promoCode}' copied to clipboard!`);
     setTimeout(() => setCopiedCode(false), 2500);
@@ -125,7 +251,7 @@ function PartnerDashboardContent() {
 
   const handleCopyPortalLink = () => {
     if (typeof window !== "undefined") {
-      navigator.clipboard.writeText(window.location.href);
+      copyToClipboard(window.location.href);
       setCopiedLink(true);
       showToast("Private partner portal link copied to clipboard!");
       setTimeout(() => setCopiedLink(false), 2500);
@@ -136,7 +262,7 @@ function PartnerDashboardContent() {
     if (!data?.partnerInfo.bankDetails?.accountNumber) return;
     const b = data.partnerInfo.bankDetails;
     const info = `Bank: ${b.bankName || 'N/A'}, Holder: ${b.accountHolderName || 'N/A'}, Routing: ${b.routingNumber || 'N/A'}, Account: ${b.accountNumber}`;
-    navigator.clipboard.writeText(info);
+    copyToClipboard(info);
     setCopiedBankInfo(true);
     showToast("Bank details copied to clipboard!");
     setTimeout(() => setCopiedBankInfo(false), 2500);
@@ -161,6 +287,92 @@ function PartnerDashboardContent() {
       setBankSubmitting(false);
     }
   };
+
+
+  if (otpRequired) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <div className="bg-zinc-900/90 border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl backdrop-blur-xl text-center relative overflow-hidden">
+          {/* Subtle ambient light */}
+          <div className="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="inline-flex items-center justify-center p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-4 text-emerald-400">
+            <ShieldCheck size={32} />
+          </div>
+
+          <h2 className="text-xl font-bold text-white mb-1 tracking-tight">Security Verification</h2>
+          <p className="text-xs text-zinc-400 mb-6 leading-relaxed">
+            For your protection, enter the 6-digit verification code sent to{" "}
+            <span className="font-semibold text-white">{maskedEmail || "your registered email"}</span>.
+          </p>
+
+          {otpError && (
+            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center gap-2 text-left">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{otpError}</span>
+            </div>
+          )}
+
+          {otpSuccess && (
+            <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs flex items-center gap-2 text-left">
+              <CheckCircle2 size={16} className="shrink-0" />
+              <span>{otpSuccess}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyOTP} className="space-y-6">
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  id={`otp-input-${idx}`}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  onPaste={handleOtpPaste}
+                  className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold bg-black/60 border border-white/15 rounded-xl text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all font-mono"
+                  autoFocus={idx === 0}
+                />
+              ))}
+            </div>
+
+            <button
+              type="submit"
+              disabled={otpSubmitting || otpDigits.join("").length !== 6}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-emerald-600/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {otpSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Verifying Code...
+                </>
+              ) : (
+                "Verify & Access Portal"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
+            <span>Didn't get the code?</span>
+            <button
+              type="button"
+              onClick={handleRequestOTP}
+              disabled={otpSending}
+              className="text-emerald-400 hover:text-emerald-300 font-medium disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {otpSending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Resend Code
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   if (loading) {
     return (
