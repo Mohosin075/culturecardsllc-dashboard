@@ -21,6 +21,7 @@ import {
   Settings,
   LogOut,
   FileText,
+  Gift,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api, useApiStatus } from "@/app/lib/api";
@@ -29,6 +30,7 @@ const menuItems = [
   { name: "Overview", icon: LayoutDashboard, href: "/overview" },
   { name: "Users", icon: Users, href: "/users" },
   { name: "Seller Verification", icon: ShieldCheck, href: "/seller-verification" },
+  { name: "Giveaway", icon: Gift, href: "/giveaway" },
   { name: "Listings", icon: Package, href: "/listings" },
   { name: "Live Streams", icon: Radio, href: "/live-streams" },
   { name: "Trades", icon: Repeat, href: "/trades" },

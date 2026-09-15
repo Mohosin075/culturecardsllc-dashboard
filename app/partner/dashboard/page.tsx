@@ -54,6 +54,13 @@ interface DashboardData {
     partnerShareTotal: number;
     ownerShareTotal: number;
   };
+  referredUsers?: Array<{
+    _id: string;
+    name: string;
+    email: string;
+    emailMasked?: string;
+    createdAt: string;
+  }>;
   realtimeGraphData: Array<{
     date: string;
     partnerEarnings: number;
@@ -779,6 +786,58 @@ function PartnerDashboardContent() {
             </div>
           </form>
         </div>
+
+      {/* Referred Collectors List */}
+      <div className="mt-8 bg-zinc-900/60 border border-white/10 rounded-2xl p-6 backdrop-blur-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-purple-400" />
+            <h3 className="text-base font-bold text-white">Referred Collectors</h3>
+          </div>
+          <span className="text-xs px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 rounded-full text-purple-300 font-semibold">
+            {data?.referredUsers?.length || 0} Registered Users
+          </span>
+        </div>
+
+        {(!data?.referredUsers || data.referredUsers.length === 0) ? (
+          <div className="text-center py-8 text-zinc-500 text-xs">
+            No users have signed up with your promo code <span className="font-semibold text-white">{data?.partnerInfo.promoCode}</span> yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 text-[11px] font-semibold text-zinc-400">
+                  <th className="py-2.5 px-3">Collector Name</th>
+                  <th className="py-2.5 px-3">Email Address</th>
+                  <th className="py-2.5 px-3 text-right">Joined Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs font-mono">
+                {data.referredUsers.map((u) => (
+                  <tr key={u._id} className="hover:bg-white/5 transition-colors">
+                    <td className="py-3 px-3 font-sans font-medium text-white flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs border border-emerald-500/30">
+                        {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <span>{u.name || 'Anonymous User'}</span>
+                    </td>
+                    <td className="py-3 px-3 text-zinc-400">{u.emailMasked || u.email}</td>
+                    <td className="py-3 px-3 text-right text-zinc-400">
+                      {new Date(u.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric"
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       </main>
     </div>
   );

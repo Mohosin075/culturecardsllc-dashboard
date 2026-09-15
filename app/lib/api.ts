@@ -25,8 +25,6 @@ const getBaseUrl = () => {
   return "https://api.areisco.com/api/v1";
 };
 
-// BASE_URL dynamically evaluated via getBaseUrl()
-
 class ApiClient {
   public isLive = false;
   private token: string | null = null;
@@ -34,7 +32,6 @@ class ApiClient {
   constructor() {
     if (isClient) {
       this.token = localStorage.getItem("admin_access_token");
-      // Initial background ping check
       this.ping();
     }
   }
@@ -77,9 +74,6 @@ class ApiClient {
     return headers;
   }
 
-  /**
-   * Core request method — throws on failure, no mock fallback.
-   */
   private async request<T>(
     path: string,
     options: RequestInit = {}
@@ -94,7 +88,6 @@ class ApiClient {
     });
 
     if (!res.ok) {
-      // If unauthenticated, clear token
       if (res.status === 401 && isClient) {
         localStorage.removeItem("admin_access_token");
         this.token = null;
@@ -103,9 +96,7 @@ class ApiClient {
       try {
         const errorData = await res.json();
         errorMessage = errorData?.message || errorData?.error || errorMessage;
-      } catch {
-        // ignore JSON parse error
-      }
+      } catch {}
       this.setLive(res.status < 500);
       throw new Error(errorMessage);
     }
@@ -115,10 +106,6 @@ class ApiClient {
     return data?.data ?? data;
   }
 
-  /**
-   * Send multipart/form-data request — needed for endpoints using multer middleware.
-   * Wraps payload as JSON string in the `data` field so multer can parse it via req.body.data.
-   */
   private async requestFormData<T>(
     path: string,
     payload: Record<string, string>,
@@ -132,7 +119,6 @@ class ApiClient {
     if (isClient && this.token) {
       headers["Authorization"] = `Bearer ${this.token}`;
     }
-    // Note: Do NOT set Content-Type — browser sets it automatically with boundary for multipart
 
     const res = await fetch(url, { method, body: formData, headers });
 
@@ -160,11 +146,9 @@ class ApiClient {
     if (isClient) {
       if (token) {
         localStorage.setItem("admin_access_token", token);
-        // Also save to cookie so Next.js middleware can read it for route guarding
         document.cookie = `admin_access_token=${token}; path=/; max-age=${60 * 60 * 24 * 10}; SameSite=Lax`;
       } else {
         localStorage.removeItem("admin_access_token");
-        // Clear cookie
         document.cookie = "admin_access_token=; path=/; max-age=0";
       }
     }
@@ -173,7 +157,6 @@ class ApiClient {
   // --- Auth Module ---
   public auth = {
     login: async (email: string, password: string) => {
-      // Try admin login first
       const res = await fetch(`${getBaseUrl()}/auth/admin-login`, {
         method: "POST",
         credentials: "include",
@@ -182,7 +165,6 @@ class ApiClient {
       });
 
       if (!res.ok) {
-        // Try regular login as fallback
         const resUser = await fetch(`${getBaseUrl()}/auth/login`, {
           method: "POST",
           credentials: "include",
@@ -194,7 +176,7 @@ class ApiClient {
           try {
             const err = await resUser.json();
             msg = err?.message || err?.error || msg;
-          } catch { /* ignore */ }
+          } catch {}
           throw new Error(msg);
         }
         const userData = await resUser.json();
@@ -227,7 +209,7 @@ class ApiClient {
             credentials: "include",
             headers: this.getHeaders(),
           });
-        } catch { /* ignore logout errors */ }
+        } catch {}
       }
       this.setToken(null);
     },
@@ -403,10 +385,6 @@ class ApiClient {
 
   // --- Orders / Payments ---
   public orders = {
-    /**
-     * Refund an order via payment refund endpoint.
-     * Pass the paymentId (from order data) if available, else orderId as fallback.
-     */
     refund: (paymentId: string) =>
       this.request<any>(`/payment/${paymentId}/refund`, { method: "POST" }),
   };
@@ -435,10 +413,6 @@ class ApiClient {
     getByChatId: (chatId: string) =>
       this.request<any>(`/message/${chatId}`, { method: "GET" }),
 
-    /**
-     * Send a message via multipart FormData — required because the /message
-     * endpoint uses multer middleware which reads body from req.body.data (JSON string).
-     */
     send: (chatId: string, text: string) =>
       this.requestFormData<any>("/message", { chatId, text }),
   };
@@ -503,11 +477,35 @@ class ApiClient {
         body: JSON.stringify(data),
       }),
   };
+
+  // --- Giveaway Management ---
+  public giveaway = {
+    getConfig: () =>
+      this.request<any>("/giveaway/config", { method: "GET" }),
+    updateConfig: (data: Record<string, any>) =>
+      this.request<any>("/giveaway/config", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    getParticipants: (page: number = 1, limit: number = 20, search: string = "") =>
+      this.request<any>(
+        `/giveaway/participants?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`,
+        { method: "GET" }
+      ),
+    getWinners: () =>
+      this.request<any>("/giveaway/winners", { method: "GET" }),
+    getRandomPool: (count: number = 100) =>
+      this.request<any>(`/giveaway/random-pool?count=${count}`, { method: "GET" }),
+    drawWinner: (userId: string, prizeName?: string, notes?: string) =>
+      this.request<any>("/giveaway/draw-winner", {
+        method: "POST",
+        body: JSON.stringify({ userId, prizeName, notes }),
+      }),
+  };
 }
 
 export const api = new ApiClient();
 
-// React hook to detect live/offline status in UI components
 import { useState, useEffect } from "react";
 
 export function useApiStatus() {

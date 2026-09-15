@@ -15,6 +15,7 @@ import categoriesReducer from "./slices/categoriesSlice";
 import notificationsReducer from "./slices/notificationsSlice";
 import reportsReducer from "./slices/reportsSlice";
 import settingsReducer from "./slices/settingsSlice";
+import giveawayReducer from "./slices/giveawaySlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -33,6 +34,7 @@ export const makeStore = () => {
       notifications: notificationsReducer,
       reports: reportsReducer,
       settings: settingsReducer,
+      giveaway: giveawayReducer,
     },
   });
 };

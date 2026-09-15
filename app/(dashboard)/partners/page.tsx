@@ -77,7 +77,7 @@ export default function AdminPartnersPage() {
   const [selectedPartnerDetails, setSelectedPartnerDetails] = useState<Partner | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [partnerDashboardData, setPartnerDashboardData] = useState<any>(null);
-  const [activeDetailsTab, setActiveDetailsTab] = useState<"overview" | "bank" | "magic">("overview");
+  const [activeDetailsTab, setActiveDetailsTab] = useState<"overview" | "bank" | "magic" | "collectors">("overview");
   const [chartType, setChartType] = useState<"bar" | "area">("area");
 
   // Email sending state
@@ -602,6 +602,20 @@ const fallbackCopy = (text: string) => {
               >
                 <Landmark size={14} />
                 <span>Bank Payout Details</span>
+              </button>
+              <button
+                onClick={() => setActiveDetailsTab("collectors")}
+                className={"flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all " + (
+                  activeDetailsTab === "collectors"
+                    ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/25"
+                    : "bg-white/5 text-zinc-400 hover:text-white"
+                )}
+              >
+                <Users size={14} />
+                <span>Referred Collectors</span>
+                <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">
+                  {partnerDashboardData?.referredUsers?.length || selectedPartnerDetails.totalReferredUsers || 0}
+                </span>
               </button>
               <button
                 onClick={() => setActiveDetailsTab("magic")}
