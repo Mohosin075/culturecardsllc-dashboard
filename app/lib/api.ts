@@ -301,7 +301,7 @@ class ApiClient {
         body: JSON.stringify({ status }),
       }),
 
-    update: (userId: string, data: { status?: string; verified?: boolean }) =>
+    update: (userId: string, data: { status?: string; verified?: boolean; sellerVerified?: boolean; isCelebrity?: boolean }) =>
       this.request<any>(`/users/${userId}`, {
         method: "PATCH",
         body: JSON.stringify(data),

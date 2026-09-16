@@ -12,6 +12,7 @@ export interface User {
   rating: number;
   transactions: number;
   status: "Active" | "Suspended";
+  isCelebrity?: boolean;
   color?: string;
 }
 
@@ -28,6 +29,7 @@ interface RawUser {
   rating?: number;
   transactions?: number;
   status?: string;
+  isCelebrity?: boolean;
 }
 
 export const fetchUsers = createAsyncThunk("users/fetchUsers", async () => {
@@ -40,6 +42,15 @@ export const updateUserStatus = createAsyncThunk(
     const backendStatus = status === "Active" ? "active" : "inactive";
     await api.users.updateStatus(userId, backendStatus);
     return { userId, status };
+  }
+);
+
+
+export const toggleUserCelebrity = createAsyncThunk(
+  "users/toggleUserCelebrity",
+  async ({ userId, isCelebrity }: { userId: string; isCelebrity: boolean }) => {
+    await api.users.update(userId, { isCelebrity });
+    return { userId, isCelebrity };
   }
 );
 
@@ -86,6 +97,7 @@ const usersSlice = createSlice({
             rating: user.rating !== undefined ? user.rating : 0,
             transactions: user.transactions !== undefined ? user.transactions : 0,
             status: user.status === "active" ? "Active" : "Suspended",
+            isCelebrity: Boolean(user.isCelebrity),
           };
         });
       })
@@ -101,6 +113,16 @@ const usersSlice = createSlice({
       })
       .addCase(updateUserStatus.rejected, (state, action) => {
         state.error = action.error.message || "Failed to update user status";
+      })
+      
+      .addCase(toggleUserCelebrity.fulfilled, (state, action) => {
+        const { userId, isCelebrity } = action.payload;
+        state.items = state.items.map((user) =>
+          user.userId === userId ? { ...user, isCelebrity } : user
+        );
+      })
+      .addCase(toggleUserCelebrity.rejected, (state, action) => {
+        state.error = action.error.message || "Failed to update celebrity status";
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         const userId = action.payload;

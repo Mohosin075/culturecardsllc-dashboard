@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { User } from "@/app/store/slices/usersSlice";
 import { useAppSelector } from "@/app/store/store";
-import { X, Star, User as UserIcon, Tag, ShoppingBag, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { X, Star, User as UserIcon, Tag, ShoppingBag, ArrowUpRight, ArrowDownLeft, Sparkles } from "lucide-react";
 
 interface UserProfileModalProps {
   user: User | null;
@@ -59,6 +59,11 @@ export default function UserProfileModal({ user, onClose }: UserProfileModalProp
                 >
                   {user.status}
                 </span>
+                {user.isCelebrity && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border bg-amber-500/10 text-amber-400 border-amber-500/20 flex items-center gap-1">
+                    <Sparkles size={10} className="fill-amber-400" /> CELEBRITY
+                  </span>
+                )}
               </div>
               <p className="text-zinc-500 text-sm mt-0.5">{user.username}</p>
             </div>
