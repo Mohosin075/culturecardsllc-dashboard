@@ -68,10 +68,10 @@ export default function GiveawayPage() {
 
   useEffect(() => {
     if (config) {
-      setTitle(config.title || "Michael Vick Autographed Jersey Giveaway");
-      setDescription(config.description || "Enter for a chance to win an authentic autographed Michael Vick Jersey!");
-      setBannerUrl(config.bannerUrl || "");
-      setDrawDate(config.drawDate || "2026-09-25");
+      setTitle(config.title || "");
+      setDescription(config.description || "");
+      setBannerUrl(config.bannerUrl || (config as any).prizeImage || "");
+      setDrawDate(config.drawDate ? config.drawDate.split("T")[0] : "");
       setIsActive(config.isActive ?? true);
     }
   }, [config]);
@@ -123,7 +123,7 @@ export default function GiveawayPage() {
       await dispatch(
         drawGiveawayWinner({
           userId: selectedWinner.userId || selectedWinner.id,
-          prizeName: "Michael Vick Autographed Jersey",
+          prizeName: (config as any)?.prizeTitle || config?.title || title || "Official Giveaway Prize",
           notes: "Selected via Admin Wheel Spin",
         })
       ).unwrap();
@@ -142,8 +142,10 @@ export default function GiveawayPage() {
       await dispatch(
         updateGiveawayConfig({
           title,
+          prizeTitle: title,
           description,
           bannerUrl,
+          prizeImage: bannerUrl,
           drawDate,
           isActive,
         })
