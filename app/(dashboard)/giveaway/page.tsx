@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Gift,
   Trophy,
@@ -15,8 +15,14 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCw,
+  UploadCloud,
+  Image as ImageIcon,
+  CheckCircle,
+  Loader2,
+  X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
+import { api } from "@/app/lib/api";
 import {
   fetchGiveawayConfig,
   updateGiveawayConfig,
@@ -58,6 +64,37 @@ export default function GiveawayPage() {
   const [bannerUrl, setBannerUrl] = useState("");
   const [drawDate, setDrawDate] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showAlert("Please select an image file (PNG, JPG, WEBP)", "error");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      showAlert("Uploading image...", "info");
+
+      const res = await api.upload.image(file);
+      if (res?.success && res?.data?.url) {
+        setBannerUrl(res.data.url);
+        showAlert("Banner image uploaded successfully!", "success");
+      } else {
+        throw new Error(res?.message || "Upload failed");
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showAlert(err?.message || "Failed to upload image", "error");
+    } finally {
+      setUploadingImage(false);
+      if (e.target) e.target.value = "";
+    }
+  };
 
   useEffect(() => {
     dispatch(fetchGiveawayConfig());
@@ -610,15 +647,106 @@ export default function GiveawayPage() {
 
             <div>
               <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">
-                Banner Image URL
+                Giveaway Banner Image
               </label>
-              <input
-                type="text"
-                value={bannerUrl}
-                onChange={(e) => setBannerUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#155DFC]"
-              />
+
+              {/* Upload Card / File Picker */}
+              <div className="space-y-3">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  className="hidden"
+                />
+
+                {bannerUrl ? (
+                  <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-black/50 p-2">
+                    <div className="relative h-44 w-full rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center">
+                      <img
+                        src={bannerUrl}
+                        alt="Giveaway Banner Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as any).src = "";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="px-4 py-2 bg-[#155DFC] hover:bg-blue-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-lg"
+                        >
+                          <UploadCloud size={16} />
+                          Change Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBannerUrl("")}
+                          className="px-4 py-2 bg-red-500/80 hover:bg-red-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-lg"
+                        >
+                          <X size={16} />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 px-2 flex items-center justify-between text-xs text-zinc-400">
+                      <span className="truncate max-w-[80%] font-mono text-[11px] text-zinc-500">{bannerUrl}</span>
+                      <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                        <CheckCircle size={13} /> Active
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                      uploadingImage
+                        ? "border-[#155DFC]/50 bg-[#155DFC]/5 pointer-events-none"
+                        : "border-white/10 hover:border-[#155DFC]/60 bg-black/30 hover:bg-black/50"
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-[#155DFC]/10 flex items-center justify-center text-[#155DFC]">
+                      {uploadingImage ? (
+                        <Loader2 className="animate-spin" size={24} />
+                      ) : (
+                        <UploadCloud size={24} />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {uploadingImage ? "Uploading Image to Server..." : "Click to select or upload image from file"}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        PNG, JPG, WEBP (Recommended 16:9 banner)
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional manual URL input toggle */}
+                <div className="pt-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={bannerUrl}
+                      onChange={(e) => setBannerUrl(e.target.value)}
+                      placeholder="Or paste external image URL: https://..."
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-zinc-300 focus:outline-none focus:border-[#155DFC] placeholder:text-zinc-600 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <ImageIcon size={14} />
+                      Browse
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>

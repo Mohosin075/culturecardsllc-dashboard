@@ -502,6 +502,33 @@ class ApiClient {
         body: JSON.stringify({ userId, prizeName, notes }),
       }),
   };
+
+  // --- Upload Management ---
+  public upload = {
+    image: async (file: File): Promise<{ success: boolean; data?: { url: string }; message?: string }> => {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const headers: HeadersInit = {};
+      const token = isClient ? localStorage.getItem("admin_access_token") : null;
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${getBaseUrl()}/upload/image`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || "Failed to upload image");
+      }
+
+      return await res.json();
+    },
+  };
 }
 
 export const api = new ApiClient();
