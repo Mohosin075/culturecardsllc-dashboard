@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, Eye, Trash2, Star, Loader2 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchListings, deleteListing, toggleBoostListing, Listing } from "@/app/store/slices/listingsSlice";
+import { fetchCategories } from "@/app/store/slices/categoriesSlice";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
 import Pagination from "@/app/components/Pagination";
@@ -12,6 +13,7 @@ import ListingDetailsModal from "@/app/components/ListingDetailsModal";
 export default function ListingsPage() {
   const dispatch = useAppDispatch();
   const { items: listings, loading } = useAppSelector((state) => state.listings);
+  const { items: categories } = useAppSelector((state) => state.categories);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const { showAlert, showConfirm } = useAlert();
@@ -19,6 +21,30 @@ export default function ListingsPage() {
   useEffect(() => {
     dispatch(fetchListings());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      dispatch(fetchCategories());
+    }
+  }, [dispatch, categories.length]);
+
+  const categoryNameById = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    categories.forEach((c) => {
+      if (c.id) map[c.id] = c.name;
+    });
+    return map;
+  }, [categories]);
+
+  const resolveCategoryName = (raw?: string) => {
+    if (!raw) return "Other";
+    return categoryNameById[raw] || raw;
+  };
+
+  const categoryFilterOptions = React.useMemo(() => {
+    const names = categories.map((c) => c.name).filter(Boolean);
+    return names.length > 0 ? ["All", ...names] : ["All", "Other"];
+  }, [categories]);
 
   const handleDeleteListing = async (productId: string) => {
     showConfirm(
@@ -51,12 +77,13 @@ export default function ListingsPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const filteredListings = listings.filter((item: Listing) => {
+    const resolvedCategory = resolveCategoryName(item.category);
     const matchesSearch =
       item.item?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.seller?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category?.toLowerCase().includes(searchQuery.toLowerCase());
+      resolvedCategory.toLowerCase().includes(searchQuery.toLowerCase());
       
-    const matchesCategory = categoryFilter === "All" || item.category?.toLowerCase() === categoryFilter.toLowerCase();
+    const matchesCategory = categoryFilter === "All" || resolvedCategory.toLowerCase() === categoryFilter.toLowerCase();
     const matchesStatus = statusFilter === "All" || item.status?.toLowerCase() === statusFilter.toLowerCase();
     const matchesBoost = boostFilter === "All" || (boostFilter === "Boosted" ? item.boosted : !item.boosted);
 
@@ -146,8 +173,8 @@ export default function ListingsPage() {
                 {/* Category Filter Pills */}
                 <div className="space-y-2">
                   <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Category</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["All", "Sneakers", "Cards", "Watches", "Fine Art", "TCG"].map((cat) => (
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    {categoryFilterOptions.map((cat) => (
                       <button
                         key={cat}
                         onClick={() => setCategoryFilter(cat)}
@@ -240,7 +267,7 @@ export default function ListingsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="bg-[#155DFC]/10 text-[#155DFC] px-3 py-1 rounded-full text-xs font-medium border border-[#155DFC]/20">
-                      {item.category}
+                      {resolveCategoryName(item.category)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-zinc-400 font-medium">
