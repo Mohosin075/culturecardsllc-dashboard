@@ -9,6 +9,7 @@ import {
   type LiveStream,
   type ScheduledStream,
 } from "@/app/store/slices/liveStreamsSlice";
+import { fetchCategories } from "@/app/store/slices/categoriesSlice";
 import ErrorState from "@/app/components/ErrorState";
 import { useAlert } from "@/app/context/AlertContext";
 import ScheduledStreamModal from "@/app/components/ScheduledStreamModal";
@@ -19,6 +20,18 @@ export default function LiveStreamsPage() {
   const { live: liveStreams, scheduled: scheduledStreams, loading, isInitialLoaded, error } = useAppSelector(
     (state) => state.liveStreams
   );
+  const { items: categories } = useAppSelector((state) => state.categories);
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      dispatch(fetchCategories());
+    }
+  }, [dispatch, categories.length]);
+
+  const categoryFilterOptions = React.useMemo(() => {
+    const names = categories.map((c) => c.name).filter(Boolean);
+    return names.length > 0 ? ["All", ...names] : ["All", "Other"];
+  }, [categories]);
   const [selectedStream, setSelectedStream] = useState<ScheduledStream | null>(null);
   const [selectedLiveStream, setSelectedLiveStream] = useState<LiveStream | null>(null);
   const [favoritedStreams, setFavoritedStreams] = useState<string[]>([]);
@@ -169,8 +182,8 @@ export default function LiveStreamsPage() {
                 {/* Category Filter Pills */}
                 <div className="space-y-2">
                   <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Category</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {["All", "Sneakers", "Cards", "Watches", "TCG"].map((cat) => (
+                  <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    {categoryFilterOptions.map((cat) => (
                       <button
                         key={cat}
                         onClick={() => setCategoryFilter(cat)}

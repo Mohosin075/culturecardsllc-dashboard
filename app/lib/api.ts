@@ -3,7 +3,7 @@
 // Check if window is defined (Next.js SSR safety)
 const isClient = typeof window !== "undefined";
 
-const getBaseUrl = () => {
+export const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }

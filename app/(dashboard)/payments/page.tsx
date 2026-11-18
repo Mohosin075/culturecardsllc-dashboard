@@ -5,7 +5,7 @@ import { DollarSign, TrendingUp, Clock, CheckCircle, Loader2, Search, Filter, Un
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchPayments, type Transaction } from "@/app/store/slices/paymentsSlice";
 import { useAlert } from "@/app/context/AlertContext";
-import { api } from "@/app/lib/api";
+import { api, getBaseUrl } from "@/app/lib/api";
 import ErrorState from "@/app/components/ErrorState";
 import Pagination from "@/app/components/Pagination";
 
@@ -121,7 +121,7 @@ export default function PaymentsPage() {
   const handleDownloadInvoice = async (tx: Transaction) => {
     try {
       const token = localStorage.getItem("admin_access_token");
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5007/api/v1";
+      const baseUrl = getBaseUrl();
       const invoiceUrl = `${baseUrl}/payment/${tx.id}/invoice`;
 
       // Trigger file fetch with Bearer auth

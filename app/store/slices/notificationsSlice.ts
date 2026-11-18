@@ -67,13 +67,21 @@ const notificationsSlice = createSlice({
           rawNotifications = payload.notifications || payload.data || [];
         }
 
+        const normalizeType = (rawType?: string, rawCategory?: string): string => {
+          const val = (rawType || rawCategory || "").toLowerCase();
+          if (val.includes("order") || val.includes("payment") || val.includes("purchase")) return "order";
+          if (val.includes("trade") || val.includes("offer") || val.includes("swap")) return "trade";
+          if (val.includes("dispute") || val.includes("report")) return "dispute";
+          return "system";
+        };
+
         state.items = rawNotifications.map((item: any, idx: number) => ({
           id: item.id || item._id || `NTF-${(idx + 1).toString().padStart(3, "0")}`,
           title: item.title || "Notification",
-          category: item.category,
+          category: item.category || item.type,
           text: item.text || item.message || item.content || item.body || "",
           date: item.date || item.timeAgo || item.createdAt || "Just now",
-          type: item.type || (item.category ? item.category.split(" ")[0].toLowerCase() : "system"),
+          type: normalizeType(item.type, item.category),
           read: item.read !== undefined ? item.read : (item.isRead !== undefined ? item.isRead : false),
         }));
       })
