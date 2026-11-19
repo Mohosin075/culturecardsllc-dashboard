@@ -443,9 +443,9 @@ class ApiClient {
 
   // --- Legal / Public Documents ---
   public legal = {
-    get: (type: "privacy-policy" | "terms-and-condition") =>
+    get: (type: LegalDocType) =>
       this.request<any>(`/public/${type}`, { method: "GET" }),
-    update: (type: "privacy-policy" | "terms-and-condition", content: string) =>
+    update: (type: LegalDocType, content: string) =>
       this.request<any>("/public", {
         method: "POST",
         body: JSON.stringify({ type, content }),
@@ -558,6 +558,13 @@ class ApiClient {
 export const api = new ApiClient();
 
 import { useState, useEffect } from "react";
+
+/** Legal documents the admin can publish; each one has a public page. */
+export type LegalDocType =
+  | "privacy-policy"
+  | "terms-and-condition"
+  | "seller-policy"
+  | "marketplace-rules";
 
 export function useApiStatus() {
   const [isLive, setIsLive] = useState(api.isLive);

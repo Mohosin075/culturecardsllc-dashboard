@@ -29,10 +29,30 @@ import {
   RotateCcw,
   Sparkles
 } from "lucide-react";
-import { api } from "@/app/lib/api";
+import { api, LegalDocType } from "@/app/lib/api";
 import { useAlert } from "@/app/context/AlertContext";
 
-type DocumentType = "privacy-policy" | "terms-and-condition";
+type DocumentType = LegalDocType;
+
+/**
+ * Every legal document the admin can publish. The seller application asks
+ * applicants to accept the seller policy and the marketplace rules by name,
+ * so those need to be editable here like the other two.
+ */
+const LEGAL_DOCS: Array<{
+  type: DocumentType;
+  label: string;
+  icon: typeof ShieldCheck;
+  path: string;
+}> = [
+  { type: "privacy-policy", label: "Privacy Policy", icon: ShieldCheck, path: "/privacy-policy" },
+  { type: "terms-and-condition", label: "Terms & Conditions", icon: FileText, path: "/terms-and-conditions" },
+  { type: "seller-policy", label: "Seller Policy", icon: FileText, path: "/seller-policy" },
+  { type: "marketplace-rules", label: "Marketplace Rules", icon: FileText, path: "/marketplace-rules" },
+];
+
+const docLabel = (type: DocumentType): string =>
+  LEGAL_DOCS.find((d) => d.type === type)?.label ?? type;
 type EditorTab = "visual" | "html" | "preview";
 
 export default function LegalDocumentsPage() {
@@ -54,10 +74,9 @@ export default function LegalDocumentsPage() {
     ? rawApiUrl.slice(0, -"/api/v1".length)
     : rawApiUrl;
 
-  const publicUrl =
-    activeDoc === "privacy-policy"
-      ? `${serverBaseUrl}/privacy-policy`
-      : `${serverBaseUrl}/terms-and-conditions`;
+  const publicUrl = `${serverBaseUrl}${
+    LEGAL_DOCS.find((d) => d.type === activeDoc)?.path ?? "/privacy-policy"
+  }`;
 
   // Fetch document content from backend MongoDB
   const loadDocument = async (type: DocumentType) => {
@@ -151,7 +170,7 @@ export default function LegalDocumentsPage() {
       setLastSaved(new Date().toLocaleString());
       setHasChanges(false);
       showAlert(
-        `${activeDoc === "privacy-policy" ? "Privacy Policy" : "Terms & Conditions"} saved to database successfully!`,
+        `${docLabel(activeDoc)} saved to database successfully!`,
         "success"
       );
     } catch (err: any) {
@@ -223,30 +242,24 @@ export default function LegalDocumentsPage() {
       {/* Control Bar: Document Switcher & Modes */}
       <div className="bg-[#111111] border border-white/5 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Document Tabs */}
-        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-full md:w-auto">
-          <button
-            onClick={() => setActiveDoc("privacy-policy")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeDoc === "privacy-policy"
-                ? "bg-[#155DFC] text-white shadow-md shadow-blue-500/20"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <ShieldCheck size={16} />
-            <span>Privacy Policy</span>
-          </button>
-
-          <button
-            onClick={() => setActiveDoc("terms-and-condition")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              activeDoc === "terms-and-condition"
-                ? "bg-[#155DFC] text-white shadow-md shadow-blue-500/20"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <FileText size={16} />
-            <span>Terms & Conditions</span>
-          </button>
+        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 w-full md:w-auto overflow-x-auto">
+          {LEGAL_DOCS.map((doc) => {
+            const Icon = doc.icon;
+            return (
+              <button
+                key={doc.type}
+                onClick={() => setActiveDoc(doc.type)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeDoc === doc.type
+                    ? "bg-[#155DFC] text-white shadow-md shadow-blue-500/20"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Icon size={16} />
+                <span>{doc.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* View Mode Buttons & Status */}
@@ -496,7 +509,7 @@ export default function LegalDocumentsPage() {
                   Live Public Preview
                 </span>
                 <h1 className="text-3xl font-extrabold text-slate-900 mt-3 mb-2">
-                  {activeDoc === "privacy-policy" ? "Privacy Policy" : "Terms & Conditions"}
+                  {docLabel(activeDoc)}
                 </h1>
                 <p className="text-xs text-slate-500">
                   AREIS LLC • Live Preview Simulation
