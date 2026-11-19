@@ -16,6 +16,7 @@ import notificationsReducer from "./slices/notificationsSlice";
 import reportsReducer from "./slices/reportsSlice";
 import settingsReducer from "./slices/settingsSlice";
 import giveawayReducer from "./slices/giveawaySlice";
+import refundsReducer from "./slices/refundsSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -28,6 +29,7 @@ export const makeStore = () => {
       trades: tradesReducer,
       orders: ordersReducer,
       disputes: disputesReducer,
+      refunds: refundsReducer,
       payments: paymentsReducer,
       boostedListings: boostedListingsReducer,
       categories: categoriesReducer,
