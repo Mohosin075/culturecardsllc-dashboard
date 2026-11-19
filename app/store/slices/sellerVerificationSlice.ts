@@ -7,15 +7,50 @@ export interface VerificationDocument {
   type?: string;
 }
 
+/** Live Stripe Connect state for an applicant, mirrored from the platform. */
+export interface SellerStripeState {
+  connected: boolean;
+  accountId?: string;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  disabledReason?: string;
+  outstandingRequirements: string[];
+}
+
+export interface SellerPolicyAcceptance {
+  sellerPolicy: boolean;
+  termsAndConditions: boolean;
+  marketplaceRules: boolean;
+  acceptedAt?: string;
+}
+
 export interface SellerVerificationRequest {
   id: string;
+  applicationId?: string;
   name: string;
   email: string;
   status: string;
   category: string;
   submitted: string;
+  /** Free text from the application: what the seller intends to sell. */
+  whatTheySell?: string;
+  businessName?: string;
+  requestId?: string;
+  stripe?: SellerStripeState;
+  payoutEligible?: boolean;
+  policyAcceptance?: SellerPolicyAcceptance;
+  rejectionReason?: string;
   documents: Array<string | VerificationDocument>;
 }
+
+const emptyStripeState: SellerStripeState = {
+  connected: false,
+  detailsSubmitted: false,
+  chargesEnabled: false,
+  payoutsEnabled: false,
+  outstandingRequirements: [],
+};
 
 export const fetchSellerVerifications = createAsyncThunk(
   "sellerVerification/fetchSellerVerifications",
@@ -69,11 +104,21 @@ const sellerVerificationSlice = createSlice({
             const reqId = req.userId || req._id || req.id || "";
             return {
               id: String(reqId),
+              applicationId: req.applicationId,
               name: req.name || req.fullName || "Applicant",
               email: req.email || "",
-              status: req.status || "Pending",
+              status: req.status || "pending_approval",
               category: req.category || "General",
               submitted: req.submitted || req.createdAt ? new Date(req.submitted || req.createdAt).toLocaleDateString() : "Recent",
+              whatTheySell: req.whatTheySell,
+              businessName: req.businessName,
+              requestId: req.requestId,
+              stripe: req.stripe
+                ? { ...emptyStripeState, ...req.stripe, outstandingRequirements: req.stripe.outstandingRequirements || [] }
+                : { ...emptyStripeState },
+              payoutEligible: Boolean(req.payoutEligible),
+              policyAcceptance: req.policyAcceptance,
+              rejectionReason: req.rejectionReason,
               documents: (req.documents || req.submittedDocuments || []).map((d: any) => {
                 if (typeof d === "string") return d;
                 return {
