@@ -215,6 +215,30 @@ class ApiClient {
     },
   };
 
+  // --- Refunds & chargebacks ---
+  public refunds = {
+    list: (status?: string) =>
+      this.request<any>(
+        `/refunds/requests${status ? `?status=${status}` : ""}`,
+        { method: "GET" },
+      ),
+
+    approve: (id: string, body?: { amount?: number; note?: string }) =>
+      this.request<any>(`/refunds/requests/${id}/approve`, {
+        method: "PATCH",
+        body: JSON.stringify(body || {}),
+      }),
+
+    reject: (id: string, note: string) =>
+      this.request<any>(`/refunds/requests/${id}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ note }),
+      }),
+
+    listDisputes: () =>
+      this.request<any>("/refunds/disputes", { method: "GET" }),
+  };
+
   // --- Dashboard Module (Admin aggregated views) ---
   public dashboard = {
     getOverview: () =>
