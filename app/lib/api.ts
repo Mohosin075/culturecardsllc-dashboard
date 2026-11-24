@@ -25,6 +25,15 @@ export const getBaseUrl = () => {
   return "https://api.areisco.com/api/v1";
 };
 
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const data = await res.json();
+    return data?.message || data?.error || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 class ApiClient {
   public isLive = false;
   private token: string | null = null;
@@ -212,6 +221,89 @@ class ApiClient {
         } catch {}
       }
       this.setToken(null);
+    },
+
+    // --- Password reset, in three steps ---------------------------------
+    // 1. forgetPassword  -> the API emails a one-time code
+    // 2. verifyResetCode -> that code is exchanged for a short-lived token
+    // 3. resetPassword   -> the token authorises the new password
+
+    /** Ask the API to email a one-time code. */
+    forgetPassword: async (email: string) => {
+      const res = await fetch(`${getBaseUrl()}/auth/forget-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not send the reset code"));
+      }
+      return true;
+    },
+
+    /** Send it again if the first one never arrived. */
+    resendResetCode: async (email: string) => {
+      const res = await fetch(`${getBaseUrl()}/auth/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          authType: "resetPassword",
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not resend the code"));
+      }
+      return true;
+    },
+
+    /**
+     * Exchange the emailed code for the reset token.
+     *
+     * The code is sent as a string: the API validates it with `z.string()`
+     * and a number loses any leading zero on the way.
+     */
+    verifyResetCode: async (email: string, oneTimeCode: string) => {
+      const res = await fetch(`${getBaseUrl()}/auth/verify-account`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          oneTimeCode: oneTimeCode.trim(),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "That code was not accepted"));
+      }
+      const data = await res.json();
+      const token = data?.data?.token ?? data?.token ?? null;
+      if (!token) {
+        throw new Error(
+          "The code was accepted but no reset token came back. Please start again.",
+        );
+      }
+      return token as string;
+    },
+
+    /** Set the new password. The reset token goes in the Authorization header. */
+    resetPassword: async (
+      resetToken: string,
+      newPassword: string,
+      confirmPassword: string,
+    ) => {
+      const res = await fetch(`${getBaseUrl()}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: resetToken,
+        },
+        body: JSON.stringify({ newPassword, confirmPassword }),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Could not reset the password"));
+      }
+      return true;
     },
   };
 

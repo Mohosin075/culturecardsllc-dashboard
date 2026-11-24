@@ -69,10 +69,21 @@ export default function SellerVerificationPage() {
   const [previewRequest, setPreviewRequest] = useState<SellerVerificationRequest | null>(null);
   const [previewDoc, setPreviewDoc] = useState<string | VerificationDocument | null>(null);
   const [chatRequest, setChatRequest] = useState<SellerVerificationRequest | null>(null);
+  const [activeTab, setActiveTab] = useState<"pending_approval" | "stripe_pending" | "all">("pending_approval");
 
   useEffect(() => {
     dispatch(fetchSellerVerifications());
   }, [dispatch]);
+
+  const pendingCount = requests.filter((r) => r.status === "pending_approval").length;
+  const stripePendingCount = requests.filter((r) => r.status === "stripe_pending").length;
+  const allCount = requests.length;
+
+  const filteredRequests = requests.filter((r) => {
+    if (activeTab === "pending_approval") return r.status === "pending_approval";
+    if (activeTab === "stripe_pending") return r.status === "stripe_pending";
+    return true;
+  });
 
   const handleApprove = async (id: string) => {
     showConfirm(
@@ -123,21 +134,99 @@ export default function SellerVerificationPage() {
 
   return (
     <div className="space-y-8 pb-12">
-      <h1 className="text-3xl font-semibold text-white">Seller Verification Requests</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-3xl font-semibold text-white">Seller Verification Requests</h1>
+        
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-black/40 border border-white/5 rounded-2xl w-fit">
+          <button
+            type="button"
+            onClick={() => setActiveTab("pending_approval")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "pending_approval"
+                ? "bg-[#155DFC] text-white shadow-lg shadow-[#155DFC]/20"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <span>Ready for Review</span>
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+              activeTab === "pending_approval" ? "bg-white/20 text-white" : "bg-white/5 text-zinc-400"
+            }`}>
+              {pendingCount}
+            </span>
+          </button>
 
-      {requests.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => setActiveTab("stripe_pending")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "stripe_pending"
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <span>Stripe Incomplete</span>
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+              activeTab === "stripe_pending" ? "bg-amber-500/30 text-amber-300" : "bg-white/5 text-zinc-400"
+            }`}>
+              {stripePendingCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("all")}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === "all"
+                ? "bg-white/10 text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <span>All</span>
+            <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${
+              activeTab === "all" ? "bg-white/20 text-white" : "bg-white/5 text-zinc-400"
+            }`}>
+              {allCount}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "stripe_pending" && (
+        <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-200/90 leading-relaxed flex items-start gap-3">
+          <span className="text-base">ℹ️</span>
+          <div>
+            <p className="font-bold text-amber-300">Applicants completing Stripe onboarding</p>
+            <p className="text-zinc-400 mt-0.5">
+              These sellers have started their application, but have not yet completed their Stripe identity or bank payout verification. Once they finish Stripe, they will automatically move to <strong>Ready for Review</strong>. You can chat with them to provide assistance.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {filteredRequests.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-16 bg-[#111111] border border-white/5 rounded-3xl text-center space-y-4 max-w-xl mx-auto mt-12 animate-in fade-in zoom-in-95 duration-200">
           <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 border border-white/10 shadow-inner">
             <Check size={28} className="text-green-500" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold text-white">All Caught Up!</h3>
-            <p className="text-zinc-500 text-sm max-w-sm">There are no pending seller verification requests to review at this moment.</p>
+            <h3 className="text-xl font-bold text-white">
+              {activeTab === "pending_approval"
+                ? "No Applications Pending Review"
+                : activeTab === "stripe_pending"
+                ? "No Incomplete Applications"
+                : "All Caught Up!"}
+            </h3>
+            <p className="text-zinc-500 text-sm max-w-sm">
+              {activeTab === "pending_approval"
+                ? "There are no seller applications waiting for your approval right now."
+                : "No applications found under this filter."}
+            </p>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {requests.map((request: SellerVerificationRequest) => (
+          {filteredRequests.map((request: SellerVerificationRequest) => (
             <div key={request.id} className="bg-[#111111] border border-white/5 rounded-2xl p-6 space-y-6 flex flex-col">
               {/* Header */}
               <div className="flex justify-between items-start">

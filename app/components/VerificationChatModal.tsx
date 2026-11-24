@@ -36,6 +36,33 @@ export default function VerificationChatModal({ request, onClose }: Verification
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { showAlert } = useAlert();
 
+  const mapRawMessage = (m: any): ChatMessage => {
+    const senderObj = typeof m.sender === "object" && m.sender !== null ? m.sender : null;
+    const actualSenderId = String(m.senderId || senderObj?._id || m.sender || "");
+    const isFromApplicant = Boolean(
+      request && (
+        (request.id && actualSenderId === String(request.id)) ||
+        (request.applicationId && actualSenderId === String(request.applicationId)) ||
+        (request.email && senderObj?.email?.toLowerCase() === request.email.toLowerCase())
+      )
+    );
+    const isMe = !isFromApplicant;
+    const senderName = isMe
+      ? "Moderator (You)"
+      : (request?.name || senderObj?.fullName || senderObj?.name || "Applicant");
+
+    return {
+      id: String(m._id || m.id || Math.random().toString()),
+      senderId: actualSenderId,
+      senderName,
+      text: m.text || m.message || "",
+      time: m.createdAt
+        ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "Just now",
+      isMe,
+    };
+  };
+
   // Scroll to bottom on message change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,16 +95,10 @@ export default function VerificationChatModal({ request, onClose }: Verification
           
           if (isMounted) {
             if (rawMsgs.length > 0) {
-              setMessages(
-                rawMsgs.map((m: any) => ({
-                  id: m._id || m.id || Math.random().toString(),
-                  senderId: m.senderId || m.sender?._id || m.sender || "",
-                  senderName: m.senderName || m.sender?.name || (m.senderId === request.id ? request.name : "Moderator (You)"),
-                  text: m.text || m.message || "",
-                  time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now",
-                  isMe: m.senderId !== request.id,
-                }))
+              const sortedMsgs = [...rawMsgs].sort(
+                (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
               );
+              setMessages(sortedMsgs.map(mapRawMessage));
             } else {
               // Initial greeting for empty chat
               setMessages([
@@ -123,16 +144,10 @@ export default function VerificationChatModal({ request, onClose }: Verification
         const res = await api.messages.getByChatId(chatId);
         const rawMsgs = Array.isArray(res) ? res : res?.messages || res?.data || [];
         if (rawMsgs.length > 0 && isMounted) {
-          setMessages(
-            rawMsgs.map((m: any) => ({
-              id: m._id || m.id || Math.random().toString(),
-              senderId: m.senderId || m.sender?._id || m.sender || "",
-              senderName: m.senderName || m.sender?.name || (m.senderId === request.id ? request.name : "Moderator (You)"),
-              text: m.text || m.message || "",
-              time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Just now",
-              isMe: m.senderId !== request.id,
-            }))
+          const sortedMsgs = [...rawMsgs].sort(
+            (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
           );
+          setMessages(sortedMsgs.map(mapRawMessage));
         }
       } catch {
         // Silently ignore polling network failures
