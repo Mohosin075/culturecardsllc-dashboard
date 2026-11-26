@@ -508,6 +508,39 @@ class ApiClient {
   public trades = {
     decline: (tradeOfferId: string) =>
       this.request<any>(`/trades/decline/${tradeOfferId}`, { method: "POST" }),
+
+    // Trades through ARIES: receive, authenticate, ship back, close out.
+    list: (params: { stage?: string; search?: string } = {}) => {
+      const q = new URLSearchParams({ limit: "100" });
+      if (params.stage) q.set("stage", params.stage);
+      if (params.search) q.set("search", params.search);
+      return this.request<any[]>(`/trades/admin/list?${q}`, { method: "GET" });
+    },
+    get: (id: string) => this.request<any>(`/trades/${id}`, { method: "GET" }),
+    receive: (id: string, party: "sender" | "receiver") =>
+      this.request<any>(`/trades/admin/${id}/receive`, {
+        method: "POST",
+        body: JSON.stringify({ party }),
+      }),
+    authenticate: (id: string, party: "sender" | "receiver", passed: boolean, note?: string) =>
+      this.request<any>(`/trades/admin/${id}/authenticate`, {
+        method: "POST",
+        body: JSON.stringify({ party, passed, note }),
+      }),
+    shipBack: (id: string) =>
+      this.request<any>(`/trades/admin/${id}/ship-back`, { method: "POST" }),
+    retryLabels: (id: string) =>
+      this.request<any>(`/trades/admin/${id}/retry-labels`, { method: "POST" }),
+    complete: (id: string) =>
+      this.request<any>(`/trades/admin/${id}/complete`, { method: "POST" }),
+    cancel: (
+      id: string,
+      body: { faultParty?: "sender" | "receiver" | "both"; reason: string; dryRun?: boolean }
+    ) =>
+      this.request<any>(`/trades/admin/${id}/cancel`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
   };
 
   // --- Orders / Payments ---
