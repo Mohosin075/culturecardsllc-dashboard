@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Filter, Eye, UserMinus, UserCheck, Trash2, Star, Loader2, Sparkles, MoreVertical } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/store/store";
 import { fetchUsers, updateUserStatus, toggleUserCelebrity, deleteUser, type User } from "@/app/store/slices/usersSlice";
+import { api } from "@/app/lib/api";
 import { useAlert } from "@/app/context/AlertContext";
 import ErrorState from "@/app/components/ErrorState";
 
@@ -16,7 +17,7 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const { showAlert, showConfirm } = useAlert();
+  const { showAlert, showConfirm, showPrompt } = useAlert();
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -37,9 +38,13 @@ export default function UsersPage() {
     const nextStatus = currentStatus === "Active" ? "Suspended" : "Active";
     showConfirm(
       `Are you sure you want to ${nextStatus === "Suspended" ? "suspend" : "activate"} this user?`,
-      () => {
-        dispatch(updateUserStatus({ userId, status: nextStatus }));
-        showAlert(`User status updated to ${nextStatus}.`, "success");
+      async () => {
+        try {
+          await dispatch(updateUserStatus({ userId, status: nextStatus })).unwrap();
+          showAlert(`User status updated to ${nextStatus}.`, "success");
+        } catch (error) {
+          showAlert(error instanceof Error ? error.message : "Could not update account status.", "error");
+        }
       },
       "Toggle User Status"
     );
@@ -49,11 +54,31 @@ export default function UsersPage() {
     const nextStatus = !currentCelebrity;
     showConfirm(
       `Are you sure you want to ${nextStatus ? "mark this user as a Celebrity / VIP" : "remove Celebrity status from this user"}?`,
-      () => {
-        dispatch(toggleUserCelebrity({ userId, isCelebrity: nextStatus }));
-        showAlert(`User ${nextStatus ? "marked as Celebrity / VIP" : "removed from Celebrity status"}.`, "success");
+      async () => {
+        try {
+          await dispatch(toggleUserCelebrity({ userId, isCelebrity: nextStatus })).unwrap();
+          showAlert(`User ${nextStatus ? "marked as Celebrity / VIP" : "removed from Celebrity status"}.`, "success");
+        } catch (error) {
+          showAlert(error instanceof Error ? error.message : "Could not update VIP status.", "error");
+        }
       },
       "Toggle Celebrity Status"
+    );
+  };
+
+  const handleRemoveSellerAccess = (userId: string) => {
+    showPrompt(
+      "Remove Seller Access",
+      "Enter a reason. This moves the account to Buyer, hides active sale listings, and ends live or scheduled shows.",
+      async (reason) => {
+        try {
+          await api.users.removeSellerAccess(userId, reason);
+          await dispatch(fetchUsers()).unwrap();
+          showAlert("Seller access removed. The account is now buyer-only.", "success");
+        } catch (error) {
+          showAlert(error instanceof Error ? error.message : "Could not update seller access.", "error");
+        }
+      }
     );
   };
 
@@ -325,6 +350,19 @@ export default function UsersPage() {
                             <span>View Profile</span>
                           </button>
 
+                          {user.role.split("/").some((role) => role.trim().toLowerCase() === "seller") && (
+                            <button
+                              onClick={() => {
+                                setOpenDropdownId(null);
+                                handleRemoveSellerAccess(user.userId);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/10 text-left cursor-pointer"
+                            >
+                              <UserMinus size={14} />
+                              <span>Remove Seller Access</span>
+                            </button>
+                          )}
+
                           {/* Toggle Celebrity */}
                           <button
                             onClick={() => {
@@ -399,7 +437,16 @@ export default function UsersPage() {
         />
       </div>
 
-      <UserProfileModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+      {selectedUser && (
+        <UserProfileModal
+          key={selectedUser.userId}
+          user={users.find((user) => user.userId === selectedUser.userId) ?? selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onUserChanged={async () => { await dispatch(fetchUsers()).unwrap(); }}
+          onToggleAccountStatus={handleToggleStatus}
+          onToggleCelebrity={handleToggleCelebrity}
+        />
+      )}
     </div>
   );
 }

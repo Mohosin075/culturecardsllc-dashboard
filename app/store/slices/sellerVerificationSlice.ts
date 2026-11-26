@@ -12,6 +12,8 @@ export interface SellerStripeState {
   connected: boolean;
   accountId?: string;
   detailsSubmitted: boolean;
+  pendingVerification?: string[];
+  lastSyncedAt?: string;
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   disabledReason?: string;
@@ -41,6 +43,7 @@ export interface SellerVerificationRequest {
   payoutEligible?: boolean;
   policyAcceptance?: SellerPolicyAcceptance;
   rejectionReason?: string;
+  accessRevokedAt?: string;
   documents: Array<string | VerificationDocument>;
 }
 

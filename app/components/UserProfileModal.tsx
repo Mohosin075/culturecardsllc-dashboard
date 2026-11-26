@@ -1,22 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "@/app/lib/api";
+import type { SellerVerificationRequest } from "@/app/store/slices/sellerVerificationSlice";
 import { User } from "@/app/store/slices/usersSlice";
 import { useAppSelector } from "@/app/store/store";
 import { X, Star, User as UserIcon, Tag, ShoppingBag, ArrowUpRight, ArrowDownLeft, Sparkles } from "lucide-react";
 
 interface UserProfileModalProps {
-  user: User | null;
+  user: User;
   onClose: () => void;
+  onUserChanged: () => Promise<void>;
+  onToggleAccountStatus: (id: string, status: User["status"]) => void;
+  onToggleCelebrity: (id: string, isCelebrity?: boolean) => void;
 }
 
-export default function UserProfileModal({ user, onClose }: UserProfileModalProps) {
+type SellerDecision = "approve" | "reject" | "revoke" | "restore";
+
+const sellerStatusLabels: Record<string, string> = {
+  stripe_pending: "Stripe setup pending",
+  pending_approval: "Pending ARIES approval",
+  approved: "Approved",
+  rejected: "Application rejected",
+};
+
+const decisionLabels: Record<SellerDecision, string> = {
+  approve: "Approve application",
+  reject: "Reject application",
+  revoke: "Remove seller access",
+  restore: "Restore seller access",
+};
+
+export default function UserProfileModal({
+  user, onClose, onUserChanged, onToggleAccountStatus, onToggleCelebrity,
+}: UserProfileModalProps) {
   const [activeTab, setActiveTab] = useState<"profile" | "listings" | "orders">("profile");
 
   const listings = useAppSelector((state) => state.listings.items);
   const orders = useAppSelector((state) => state.orders.items);
 
-  if (!user) return null;
+  const [application, setApplication] = useState<SellerVerificationRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [decision, setDecision] = useState<SellerDecision | null>(null);
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const hasSellerRole = user.role.split("/").some((role) => role.trim().toLowerCase() === "seller");
+  const awaitingReview = application?.status === "stripe_pending" || application?.status === "pending_approval";
+  const needsReason = decision === "reject" || decision === "revoke";
+
+  useEffect(() => {
+    let current = true;
+    api.dashboard.getUserSellerApplication(user.userId)
+      .then((result) => { if (current) setApplication(result.application); })
+      .catch((error: Error) => { if (current) setError(error.message); })
+      .finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
+  }, [user.userId]);
+
+  async function saveDecision() {
+    if (!decision || saving || (needsReason && !reason.trim())) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      switch (decision) {
+        case "approve":
+        case "restore":
+          await api.dashboard.approveSellerVerification(user.userId);
+          break;
+        case "reject":
+          await api.dashboard.rejectSellerVerification(user.userId, reason.trim());
+          break;
+        case "revoke":
+          await api.users.removeSellerAccess(user.userId, reason.trim());
+          break;
+      }
+      setNotice("Seller access updated.");
+      setDecision(null);
+      setReason("");
+      const [result] = await Promise.all([
+        api.dashboard.getUserSellerApplication(user.userId),
+        onUserChanged(),
+      ]);
+      setApplication(result.application);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not update seller access.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   // Filter listings where this user is the seller
   const userListings = listings.filter(
@@ -134,6 +208,79 @@ export default function UserProfileModal({ user, onClose }: UserProfileModalProp
                   <span className="text-sm text-zinc-300 block mt-1">{user.email}</span>
                 </div>
               </div>
+
+              <section className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-5">
+                <h3 className="font-semibold text-white">Seller access</h3>
+                {loading ? <p className="text-sm text-zinc-400">Loading seller status…</p> : (
+                  <p className="text-sm text-zinc-200">
+                    {application
+                      ? (application.accessRevokedAt ? "Seller access revoked" : sellerStatusLabels[application.status] ?? application.status)
+                      : hasSellerRole ? "Seller access active" : "No seller application"}
+                  </p>
+                )}
+                {application && (
+                  <div className="space-y-2 text-sm text-zinc-400">
+                    {application.whatTheySell && <p>Intends to sell {application.whatTheySell}</p>}
+                    {application.stripe?.accountId && <p className="break-all">Stripe account {application.stripe.accountId}</p>}
+                    <p>Stripe details {application.stripe?.detailsSubmitted ? "submitted" : "pending"}</p>
+                    <p>Charges {application.stripe?.chargesEnabled ? "enabled" : "disabled"} · Payouts {application.stripe?.payoutsEnabled ? "enabled" : "disabled"}</p>
+                    {application.stripe?.pendingVerification?.length ? <p>Stripe verification pending for {application.stripe.pendingVerification.join(", ")}</p> : null}
+                    {application.stripe?.outstandingRequirements?.length ? <p>Stripe still needs {application.stripe.outstandingRequirements.join(", ")}</p> : null}
+                    {application.rejectionReason && <p className="text-amber-400">Decision reason · {application.rejectionReason}</p>}
+                  </div>
+                )}
+                {!decision && (
+                  <div className="flex flex-wrap gap-2">
+                    {application?.accessRevokedAt && !hasSellerRole && (
+                      <button type="button" className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white" onClick={() => { setError(""); setDecision("restore"); }}>Restore seller access</button>
+                    )}
+                    {!application?.accessRevokedAt && (awaitingReview || application?.status === "rejected") && application?.stripe?.detailsSubmitted && (
+                      <button type="button" className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white" onClick={() => { setError(""); setDecision("approve"); }}>Approve application</button>
+                    )}
+                    {awaitingReview && (
+                      <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200" onClick={() => { setError(""); setDecision("reject"); }}>Reject application</button>
+                    )}
+                    {hasSellerRole && (
+                      <button type="button" className="rounded-lg border border-amber-500/40 px-3 py-2 text-sm text-amber-400" onClick={() => { setError(""); setDecision("revoke"); }}>Remove seller access</button>
+                    )}
+                  </div>
+                )}
+                {decision && (
+                  <form className="space-y-3 rounded-xl border border-white/10 p-3" onSubmit={(event) => { event.preventDefault(); void saveDecision(); }}>
+                    <p className="font-medium text-white">{decisionLabels[decision]}</p>
+                    {!needsReason ? (
+                      <p className="text-sm text-zinc-400">
+                        {decision === "restore"
+                          ? "Restore Seller using the existing application and Stripe account. Selling and live access still require Stripe clearance."
+                          : "Selling opens once Stripe enables charges and payouts."}
+                      </p>
+                    ) : (
+                      <label className="block text-sm text-zinc-300">
+                        {decision === "revoke" ? "Reason for removing selling and live access" : "Reason for rejecting the application"}
+                        <textarea required maxLength={1000} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-2 block w-full rounded-lg border border-white/15 bg-black/40 p-2 text-white" />
+                      </label>
+                    )}
+                    <div className="flex gap-2">
+                      <button type="submit" disabled={saving || (needsReason && !reason.trim())} className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50">{saving ? "Saving…" : "Confirm"}</button>
+                      <button type="button" disabled={saving} onClick={() => { setDecision(null); setReason(""); }} className="px-3 py-2 text-sm text-zinc-300">Cancel</button>
+                    </div>
+                  </form>
+                )}
+                {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
+                {notice && <p role="status" className="text-sm text-green-400">{notice}</p>}
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="font-semibold text-white">Account actions</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200" onClick={() => onToggleAccountStatus(user.userId, user.status)}>
+                    {user.status === "Active" ? "Suspend account" : "Reactivate account"}
+                  </button>
+                  <button type="button" className="rounded-lg border border-white/15 px-3 py-2 text-sm text-zinc-200" onClick={() => onToggleCelebrity(user.userId, user.isCelebrity)}>
+                    {user.isCelebrity ? "Remove VIP status" : "Mark as VIP"}
+                  </button>
+                </div>
+              </section>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-5 bg-zinc-900/50 border border-white/5 rounded-2xl flex flex-col items-center justify-center text-center">

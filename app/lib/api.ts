@@ -342,6 +342,11 @@ class ApiClient {
     getSellerVerifications: () =>
       this.request<any>("/dashboard/seller-verifications", { method: "GET" }),
 
+    getUserSellerApplication: (userId: string) =>
+      this.request<{ application: import("@/app/store/slices/sellerVerificationSlice").SellerVerificationRequest | null }>(
+        `/dashboard/users/${userId}/seller-application`, { method: "GET" }
+      ),
+
     approveSellerVerification: (userId: string) =>
       this.request<any>(`/dashboard/seller-verifications/${userId}/approve`, { method: "PATCH" }),
 
@@ -410,6 +415,12 @@ class ApiClient {
   public users = {
     getAll: () =>
       this.request<any>("/users", { method: "GET" }),
+
+    removeSellerAccess: (userId: string, reason: string) =>
+      this.request<void>(`/dashboard/users/${userId}/remove-seller-access`, {
+        method: "PATCH",
+        body: JSON.stringify({ reason }),
+      }),
 
     updateStatus: (userId: string, status: string) =>
       this.request<any>(`/users/${userId}`, {

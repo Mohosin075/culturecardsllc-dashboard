@@ -268,9 +268,23 @@ export default function SellerVerificationPage() {
                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Stripe Connect</p>
                 <div className="space-y-2 p-3 bg-black/40 border border-white/5 rounded-xl">
                   <StatusRow label="Account connected" ok={Boolean(request.stripe?.connected)} />
-                  <StatusRow label="Identity verification" ok={Boolean(request.stripe?.detailsSubmitted)} />
+                  <StatusRow label="Stripe details submitted" ok={Boolean(request.stripe?.detailsSubmitted)} />
                   <StatusRow label="Charges enabled" ok={Boolean(request.stripe?.chargesEnabled)} />
                   <StatusRow label="Payout eligible" ok={Boolean(request.stripe?.payoutsEnabled)} />
+
+                  {request.stripe?.accountId && (
+                    <p className="text-xs text-zinc-400 break-all">Stripe account {request.stripe.accountId}</p>
+                  )}
+                  {request.stripe?.lastSyncedAt && (
+                    <p className="text-xs text-zinc-400">
+                      Last synced {new Date(request.stripe.lastSyncedAt).toLocaleString()}
+                    </p>
+                  )}
+                  {Boolean(request.stripe?.pendingVerification?.length) && (
+                    <p className="text-xs text-amber-400">
+                      Stripe verification pending for {request.stripe?.pendingVerification?.join(", ")}
+                    </p>
+                  )}
 
                   {request.stripe?.disabledReason ? (
                     <p className="text-[11px] text-red-400 pt-1 border-t border-white/5">
