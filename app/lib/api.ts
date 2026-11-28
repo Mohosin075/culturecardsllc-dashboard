@@ -307,6 +307,17 @@ class ApiClient {
     },
   };
 
+  // --- Tips ---
+  public tips = {
+    listAll: (params: { page?: number; limit?: number; status?: string } = {}) => {
+      const q = new URLSearchParams();
+      if (params.page) q.set("page", String(params.page));
+      if (params.limit) q.set("limit", String(params.limit));
+      if (params.status) q.set("status", params.status);
+      return this.request<any>(`/tip/admin/all?${q}`, { method: "GET" });
+    },
+  };
+
   // --- Refunds & chargebacks ---
   public refunds = {
     list: (status?: string) =>
@@ -467,13 +478,19 @@ class ApiClient {
 
   // --- Categories ---
   public categories = {
+    // The API pages at 10 by default, which hid most categories and
+    // every subcategory from the admin.
     getAll: () =>
-      this.request<any>("/category", { method: "GET" }),
+      this.request<any>("/category?limit=500", { method: "GET" }),
 
-    create: (name: string, description: string) =>
+    create: (name: string, description: string, parent?: string) =>
       this.request<any>("/category", {
         method: "POST",
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify(
+          parent
+            ? { name, description, parent, type: "subcategory" }
+            : { name, description },
+        ),
       }),
 
     update: (categoryId: string, data: Record<string, any>) =>
@@ -559,6 +576,8 @@ class ApiClient {
 
   // --- Auctions / Live Stream ---
   public auctions = {
+    adminOverview: (streamId: string) =>
+      this.request<any>(`/auctions/admin/stream/${streamId}/overview`, { method: "GET" }),
     getStreams: (status?: string) =>
       this.request<any>(`/auctions/streams${status ? `?status=${status}` : ""}`, { method: "GET" }),
     getAgoraToken: (channelName: string, role: string = "subscriber", uid: number = 0) =>

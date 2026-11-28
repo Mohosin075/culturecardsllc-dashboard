@@ -14,6 +14,7 @@ import ErrorState from "@/app/components/ErrorState";
 import { useAlert } from "@/app/context/AlertContext";
 import ScheduledStreamModal from "@/app/components/ScheduledStreamModal";
 import LiveStreamModal from "@/app/components/LiveStreamModal";
+import ShowOverviewModal from "@/app/components/ShowOverviewModal";
 
 export default function LiveStreamsPage() {
   const dispatch = useAppDispatch();
@@ -34,6 +35,7 @@ export default function LiveStreamsPage() {
   }, [categories]);
   const [selectedStream, setSelectedStream] = useState<ScheduledStream | null>(null);
   const [selectedLiveStream, setSelectedLiveStream] = useState<LiveStream | null>(null);
+  const [overviewStream, setOverviewStream] = useState<LiveStream | null>(null);
   const [favoritedStreams, setFavoritedStreams] = useState<string[]>([]);
   const [reportedStreams, setReportedStreams] = useState<string[]>([]);
   const { showAlert, showConfirm } = useAlert();
@@ -268,6 +270,12 @@ export default function LiveStreamsPage() {
                     View Stream
                   </button>
                   <button
+                    onClick={() => setOverviewStream(stream)}
+                    className="px-3 bg-black/40 hover:bg-white/10 text-zinc-300 border border-white/5 rounded-xl text-sm font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    Details
+                  </button>
+                  <button
                     onClick={() => handleReportStream(stream.id)}
                     className={`p-2 rounded-xl transition-all cursor-pointer border ${
                       reportedStreams.includes(stream.id)
@@ -383,6 +391,12 @@ export default function LiveStreamsPage() {
       />
 
       {/* Live Stream View Modal (Real-time Simulation) */}
+      <ShowOverviewModal
+        streamId={overviewStream?.id || null}
+        title={overviewStream?.title}
+        onClose={() => setOverviewStream(null)}
+      />
+
       <LiveStreamModal
         key={selectedLiveStream?.id || "empty"}
         stream={selectedLiveStream}

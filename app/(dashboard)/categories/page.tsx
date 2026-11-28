@@ -78,7 +78,7 @@ export default function CategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [editId, setEditId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", parent: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -88,6 +88,9 @@ export default function CategoriesPage() {
   useEffect(() => {
     dispatch(fetchCategories());
   }, [dispatch]);
+
+  const topLevel = categories.filter((c) => !c.parentId);
+  const nameById = new Map(categories.map((c) => [c.id, c.name]));
 
   // Compute Stats summary card data
   const totalCategoriesCount = categories.length;
@@ -124,14 +127,14 @@ export default function CategoriesPage() {
   const handleAddClick = () => {
     setModalMode("add");
     setEditId(null);
-    setFormData({ name: "", description: "" });
+    setFormData({ name: "", description: "", parent: "" });
     setModalOpen(true);
   };
 
   const handleEditClick = (category: Category) => {
     setModalMode("edit");
     setEditId(category.id);
-    setFormData({ name: category.name, description: category.description || "" });
+    setFormData({ name: category.name, description: category.description || "", parent: category.parentId || "" });
     setModalOpen(true);
   };
 
@@ -145,8 +148,8 @@ export default function CategoriesPage() {
     setIsSubmitting(true);
     try {
       if (modalMode === "add") {
-        await dispatch(addCategory({ name: formData.name, description: formData.description })).unwrap();
-        showAlert("Category added successfully.", "success");
+        await dispatch(addCategory({ name: formData.name, description: formData.description, parent: formData.parent || undefined })).unwrap();
+        showAlert(formData.parent ? "Subcategory added successfully." : "Category added successfully.", "success");
       } else if (modalMode === "edit" && editId) {
         await dispatch(editCategory({ id: editId, description: formData.description })).unwrap();
         showAlert("Category updated successfully.", "success");
@@ -344,10 +347,17 @@ export default function CategoriesPage() {
                           <h2 className="text-lg font-bold text-zinc-100 group-hover:text-white transition-colors truncate">
                             {category.name}
                           </h2>
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold mt-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            {category.count || 0} listings
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-xs font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                              {category.count || 0} listings
+                            </span>
+                            {category.parentId && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 text-xs font-semibold">
+                                Under {nameById.get(category.parentId) || "parent"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -409,7 +419,7 @@ export default function CategoriesPage() {
           <div className="relative w-full max-w-md bg-[#121215] border border-white/10 rounded-3xl shadow-2xl p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
               <h3 className="text-xl font-bold text-white">
-                {modalMode === "add" ? "Create Category" : "Modify Category"}
+                {modalMode === "add" ? (formData.parent ? "Create Subcategory" : "Create Category") : "Modify Category"}
               </h3>
               <button 
                 onClick={() => setModalOpen(false)}
@@ -437,6 +447,30 @@ export default function CategoriesPage() {
                     Note: To preserve listing integrations, category names cannot be edited once created.
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Parent Category</label>
+                <select
+                  value={formData.parent}
+                  onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
+                  disabled={isSubmitting || modalMode === "edit"}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-zinc-200 focus:outline-none focus:border-[#155DFC] transition-colors disabled:opacity-50 text-sm font-medium"
+                >
+                  <option value="">None (top-level category)</option>
+                  {topLevel
+                    .filter((c) => c.id !== editId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  {modalMode === "edit"
+                    ? "A category's parent is fixed once created."
+                    : "Pick a parent to create this as a subcategory."}
+                </p>
               </div>
 
               <div className="space-y-2">

@@ -10,8 +10,16 @@ export const fetchCategories = createAsyncThunk(
 
 export const addCategory = createAsyncThunk(
   "categories/addCategory",
-  async ({ name, description }: { name: string; description: string }) => {
-    const newCat = await api.categories.create(name, description);
+  async ({
+    name,
+    description,
+    parent,
+  }: {
+    name: string;
+    description: string;
+    parent?: string;
+  }) => {
+    const newCat = await api.categories.create(name, description, parent);
     return newCat;
   }
 );
@@ -38,7 +46,13 @@ export interface Category {
   count: number;
   iconName: string;
   description?: string;
+  /** Parent category id; set only for subcategories. */
+  parentId?: string;
+  type?: "category" | "subcategory";
 }
+
+const parentIdOf = (parent: any): string | undefined =>
+  !parent ? undefined : typeof parent === "object" ? parent._id || parent.id : String(parent);
 
 interface CategoriesState {
   items: Category[];
@@ -74,6 +88,8 @@ const categoriesSlice = createSlice({
           count: cat.count !== undefined ? cat.count : (cat.listingsCount || 0),
           iconName: cat.iconName || (cat.name === "Sneakers" ? "Footprints" : (cat.name === "Trading Cards" || cat.name === "Cards" ? "Cards" : (cat.name === "Watches" ? "Watch" : (cat.name === "Tech" ? "Laptop" : "Cards")))),
           description: cat.description || "",
+          parentId: parentIdOf(cat.parent),
+          type: cat.type === "subcategory" || cat.parent ? "subcategory" : "category",
         }));
       })
       .addCase(fetchCategories.rejected, (state, action) => {
@@ -89,6 +105,8 @@ const categoriesSlice = createSlice({
           count: 0,
           iconName: "Cards",
           description: newCat.description || "",
+          parentId: parentIdOf(newCat.parent),
+          type: newCat.parent ? "subcategory" : "category",
         });
       })
       // Edit Category

@@ -23,6 +23,7 @@ import {
   FileText,
   Gift,
   Undo2,
+  HandCoins,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { api, useApiStatus } from "@/app/lib/api";
@@ -39,6 +40,7 @@ const menuItems = [
   { name: "Orders", icon: ShoppingCart, href: "/orders" },
   { name: "Disputes", icon: AlertTriangle, href: "/disputes" },
   { name: "Payments", icon: DollarSign, href: "/payments" },
+  { name: "Tips", icon: HandCoins, href: "/tips" },
   { name: "Boosted Listings", icon: Zap, href: "/boosted-listings" },
   { name: "Categories", icon: LayoutGrid, href: "/categories" },
   { name: "Notifications", icon: Bell, href: "/notifications" },
