@@ -76,7 +76,7 @@ export default function ReportsPage() {
   const dispatch = useAppDispatch();
   const { data, loading, error } = useAppSelector((state) => state.reports);
 
-  const [range, setRange] = useState("30d");
+  const [range, setRange] = useState("month");
   const [activeTab, setActiveTab] = useState("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -159,6 +159,17 @@ export default function ReportsPage() {
       isPositive: !(summary.totalSalesChange || "").startsWith("-"),
     },
     {
+      name: "Platform Fees",
+      value: `$${(summary.platformFees || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      growth: summary.platformFeesChange || "+0%",
+      color: "text-sky-400",
+      bg: "bg-sky-500/10",
+      border: "hover:border-sky-500/30",
+      bgGrad: "bg-gradient-to-r from-sky-500 to-blue-600",
+      shadow: "hover:shadow-[0_0_30px_rgba(14,165,233,0.15)]",
+      isPositive: !(summary.platformFeesChange || "").startsWith("-"),
+    },
+    {
       name: "Active Users",
       value: (summary.activeUsers || 0).toLocaleString(),
       growth: summary.activeUsersChange || "+0%",
@@ -217,11 +228,12 @@ export default function ReportsPage() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Calendar periods (UTC), each compared with the one before it.
   const ranges = [
-    { label: "7 Days", value: "7d" },
-    { label: "30 Days", value: "30d" },
-    { label: "90 Days", value: "90d" },
-    { label: "1 Year", value: "1y" },
+    { label: "Daily", value: "today" },
+    { label: "Weekly", value: "week" },
+    { label: "Monthly", value: "month" },
+    { label: "Yearly", value: "year" },
     { label: "All Time", value: "all" },
   ];
 
@@ -259,7 +271,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Interactive Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = getIconByName(stat.name);
           return (

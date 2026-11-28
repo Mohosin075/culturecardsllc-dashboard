@@ -51,7 +51,7 @@ export default function PaymentsPage() {
       glow: "hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]",
     },
     { 
-      name: "Commission Earned", 
+      name: "Platform Fees Earned", 
       value: formatCurrency(summary?.commissionEarned ?? 0), 
       icon: TrendingUp, 
       color: "text-blue-400 border-blue-500/20", 
